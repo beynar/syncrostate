@@ -5,22 +5,24 @@ export const traverseSchema = ({
 	doc = new Y.Doc(),
 	schema,
 	path = '',
-	parent = doc.getMap('root'),
+	parent = doc,
 	follower,
 	onType
 }: {
 	doc?: Y.Doc;
 	schema: Schema;
-	parent?: Y.Map<any>;
+	parent?: Y.Map<any> | Y.Doc;
 	follower: any;
 	path?: string;
 	onType: (p: {
+		isRoot: boolean;
 		path: string;
-		primitive?: Primitive;
+		schema: Schema | Primitive;
 		follower?: any | null;
 		type: Y.AbstractType<any>;
 	}) => void;
 }) => {
+	const isRoot = parent instanceof Y.Doc;
 	for (const [key, schemaType] of Object.entries(schema)) {
 		const isArray = Array.isArray(schemaType);
 		const type = isArray ? schemaType[0] : schemaType;
@@ -29,36 +31,54 @@ export const traverseSchema = ({
 		const newPath = path ? `${path}.${key}` : key;
 		if (primitive) {
 			if (isArray) {
-				const yType = new Y.Array();
-				parent.set(key, yType);
-				onType({ path: newPath, primitive, follower: follower?.[key], type: yType });
+				const yType = isRoot ? doc.getArray(key) : new Y.Array();
+				!isRoot && parent.set(key, yType);
+				onType({
+					isRoot,
+					path: newPath,
+					schema: primitive,
+					follower: follower?.[key],
+					type: yType
+				});
 				for (let i = 0; ; i++) {
 					const arrayPath = `${newPath}.${i}`;
 					const value = follower?.[key]?.[i];
 					if (!value) break;
 					const yValue = new Y.Text(value || '');
 					yType.insert(i, [yValue]);
-					onType({ path: arrayPath, primitive, follower: value, type: yValue });
+					onType({
+						isRoot: false,
+						path: arrayPath,
+						schema: primitive,
+						follower: value,
+						type: yValue
+					});
 				}
 			} else {
-				const yType = new Y.Text();
+				const yType = isRoot ? doc.getText(key) : new Y.Text();
 				yType.setAttribute('t', 1);
-				parent.set(key, yType);
+				!isRoot && parent.set(key, yType);
 				yType.insert(0, follower?.[key] || '');
-				onType({ path: newPath, primitive, follower: follower?.[key], type: yType });
+				onType({
+					isRoot,
+					path: newPath,
+					schema: primitive,
+					follower: follower?.[key],
+					type: yType
+				});
 			}
 		} else if (schema) {
 			if (isArray) {
-				const yType = new Y.Array();
-				parent.set(key, yType);
-				onType({ path: newPath, primitive, follower: follower?.[key], type: yType });
+				const yType = isRoot ? doc.getArray(key) : new Y.Array();
+				!isRoot && parent.set(key, yType);
+				onType({ isRoot, path: newPath, schema, follower: follower?.[key], type: yType });
 				for (let i = 0; ; i++) {
 					const arrayPath = `${newPath}.${i}`;
 					const value = follower?.[key]?.[i];
 					if (!value) break;
 					const nestedMap = new Y.Map();
 					yType.insert(i, [nestedMap]);
-					onType({ path: arrayPath, primitive, follower: value, type: yType });
+					onType({ isRoot: false, path: arrayPath, schema, follower: value, type: yType });
 					traverseSchema({
 						schema,
 						path: arrayPath,
@@ -68,9 +88,9 @@ export const traverseSchema = ({
 					});
 				}
 			} else {
-				const yType = new Y.Map();
-				parent.set(key, yType);
-				onType({ path: newPath, follower: follower?.[key], type: yType });
+				const yType = isRoot ? doc.getMap(key) : new Y.Map();
+				!isRoot && parent.set(key, yType);
+				onType({ isRoot, path: newPath, follower: follower?.[key], type: yType, schema });
 				traverseSchema({
 					schema,
 					path: newPath,
@@ -81,4 +101,6 @@ export const traverseSchema = ({
 			}
 		}
 	}
+
+	return doc;
 };

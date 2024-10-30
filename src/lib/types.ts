@@ -14,6 +14,7 @@ export type NonRecursiveType =
 	| string
 	| number
 	| boolean
+	| Date
 	| symbol
 	| bigint
 	| Function

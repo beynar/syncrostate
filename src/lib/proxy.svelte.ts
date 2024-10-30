@@ -2,15 +2,15 @@ import { SvelteMap } from 'svelte/reactivity';
 import { traverseSchema } from './traverse.js';
 import type { Schema, SchemaOutput, Simplify } from './types.js';
 import * as Y from 'yjs';
-
-const toYjs = (schema: Schema, object: any) => {};
+import { createTextProxy, sText } from './types/text.svelte.js';
 
 export const createProxy = <T extends Schema, D = undefined, Enforce extends boolean = false>(
 	schema: T,
 	object: any
 ) => {
 	const typesMap = new SvelteMap<string, Y.AbstractType<any>>();
-	traverseSchema({
+	const valueMap = new SvelteMap<string, sText>();
+	const doc = traverseSchema({
 		schema,
 		follower: object,
 		onType: (p) => {
@@ -27,21 +27,26 @@ export const createProxy = <T extends Schema, D = undefined, Enforce extends boo
 	}) => {
 		const handler: ProxyHandler<SchemaOutput<T>> = {
 			get(target: SchemaOutput<T>, key: string) {
+				if (key === '$doc') {
+					return doc;
+				}
+
+				if (key === '$root') {
+					return doc.getMap('root');
+				}
 				const newPath = path ? `${path}.${key}` : key;
 				const yType = typesMap.get(newPath);
-				console.log('yType', newPath);
-				console.log('yType', Array.from(typesMap.keys()), yType instanceof Y.Array);
+
 				if (yType instanceof Y.Map || yType instanceof Y.Array) {
 					return createProxy({
 						path: path ? `${path}.${key}` : key,
 						set(target, key, value) {
-							console.log({ path, key, value });
 							return true;
 						}
 					});
 				} else {
+					return createTextProxy(valueMap.get(newPath) || new sText(yType as Y.Text));
 					// console.log(typesMap.keys());
-					return typesMap.get(path ? `${path}.${key}` : key);
 				}
 			},
 			set
@@ -49,7 +54,10 @@ export const createProxy = <T extends Schema, D = undefined, Enforce extends boo
 		return new Proxy({} as any, handler) as Simplify<SchemaOutput<T, D, Enforce>>;
 	};
 
-	return createProxy({ path: '', set: () => true });
+	return createProxy({ path: '', set: () => true }) as Simplify<SchemaOutput<T, D, Enforce>> & {
+		$doc: Y.Doc;
+		$root: Y.Map<any>;
+	};
 };
 
 const schema = {
@@ -63,9 +71,9 @@ const schema = {
 	}
 } satisfies Schema;
 
-const proxy = createProxy(schema, { name: 'John', array: ['hello'] });
+export const proxy = createProxy(schema, { name: 'John', array: ['hello'] });
 
-console.log('is y array', proxy.array);
+console.log('is y array', proxy.nested.nested.nested.age);
 
 // console.log((proxy.array[0] as Y.Text)?.toString());
 // Testting setter

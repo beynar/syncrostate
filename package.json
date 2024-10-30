@@ -11,7 +11,7 @@
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
-		"test:unit": "vitest",
+		"test:unit": "vitest --ui",
 		"test": "npm run test:unit -- --run"
 	},
 	"files": [
@@ -49,15 +49,20 @@
 		"prettier": "^3.3.2",
 		"prettier-plugin-svelte": "^3.2.6",
 		"publint": "^0.2.0",
-		"svelte": "^5.0.0",
+		"svelte": "^5.1.4",
 		"svelte-check": "^4.0.0",
 		"tailwindcss": "^3.4.9",
 		"typescript": "^5.0.0",
 		"typescript-eslint": "^8.0.0",
 		"vite": "^5.0.11",
-		"vitest": "^2.0.4"
+		"vitest": "^2.0.4",
+		"zod": "^3.23.8"
 	},
 	"dependencies": {
+		"@syncedstore/core": "^0.6.0",
+		"@vitest/ui": "^2.1.3",
+		"valibot": "^0.42.1",
+		"y-protocols": "^1.0.6",
 		"yjs": "^13.6.20"
 	}
 }
