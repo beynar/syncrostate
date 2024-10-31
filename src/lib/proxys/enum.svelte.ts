@@ -1,20 +1,17 @@
-import type { Primitive } from '$lib/types.js';
 import * as Y from 'yjs';
-import { SvelteDate } from 'svelte/reactivity';
-import type { Validator } from '$lib/schemas/schema.js';
-import type { NumberValidator } from '$lib/schemas/number.js';
+import type { EnumValidator } from '$lib/schemas/enum.js';
 
-export class SyncedNumber {
+export class SyncedEnum<T extends string | number> {
 	INTERNAL_ID = crypto.randomUUID();
 	yType: Y.Text;
-	validator: NumberValidator;
+	validator: EnumValidator<T, false, false>;
 	rawValue = $state<string>('');
 
 	get value() {
 		return this.validator.coerce(this.rawValue);
 	}
 
-	set value(value: number | null) {
+	set value(value: T | null) {
 		if (value === null && !this.validator.$schema.nullable) {
 			return;
 		}
@@ -36,11 +33,11 @@ export class SyncedNumber {
 	destroy = () => {
 		this.yType.unobserve(this.observe);
 	};
-	constructor(yType: Y.Text, validator: NumberValidator) {
+
+	constructor(yType: Y.Text, validator: EnumValidator<T>) {
 		this.yType = yType;
 		this.validator = validator;
 		this.rawValue = yType.toString();
 		this.yType.observe(this.observe);
-		this.yType.observe((e, transact) => {});
 	}
 }

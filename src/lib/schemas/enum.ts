@@ -1,3 +1,4 @@
+import { NULL } from '$lib/constants.js';
 import { BaseValidator, type BaseSchema } from './base.js';
 
 export type EnumSchema<T extends string | number> = BaseSchema<T> & {
@@ -20,10 +21,12 @@ export class EnumValidator<
 	}
 
 	coerce(value: any): T | null {
+		if (value === NULL) return null;
 		const DEFAULT_VALUE = this.$schema.default ?? null;
 		return this.validate(value) ?? DEFAULT_VALUE;
 	}
 	stringify = (value: any) => {
+		if (value === null) return NULL;
 		return this.coerce(value)?.toString() ?? '';
 	};
 }

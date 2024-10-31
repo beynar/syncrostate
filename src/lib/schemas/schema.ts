@@ -5,9 +5,9 @@ import { BooleanValidator, type BooleanSchema } from './boolean.js';
 import { DateValidator, type DateSchema } from './date.js';
 import { EnumValidator, type EnumSchema } from './enum.js';
 import { StringValidator, type StringSchema } from './string.js';
-
 import { ObjectValidator, type ObjectSchema, type ObjectShape } from './object.js';
 import { RichTextValidator, type RichTextSchema } from './richtext.js';
+import { NumberValidator, type NumberSchema } from './number.js';
 
 export type Schema =
 	| ArraySchema<any>
@@ -15,6 +15,7 @@ export type Schema =
 	| BooleanSchema
 	| DateSchema
 	| StringSchema
+	| NumberSchema
 	| RichTextSchema
 	| EnumSchema<any>;
 
@@ -30,7 +31,8 @@ export const y = {
 	string: () => new StringValidator(),
 	richText: () => new RichTextValidator(),
 	object: <T extends ObjectShape>(shape: T) => new ObjectValidator<T>(shape),
-	array: <T extends Validator>(shape: T) => new ArrayValidator<T>(shape)
+	array: <T extends Validator>(shape: T) => new ArrayValidator<T>(shape),
+	number: () => new NumberValidator()
 };
 
 type NORO<N extends boolean, O extends boolean, T> = N extends true

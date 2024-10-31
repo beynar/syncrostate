@@ -1,3 +1,4 @@
+import { NULL } from '$lib/constants.js';
 import { BaseValidator, type BaseSchema } from './base.js';
 
 export type BooleanSchema = BaseSchema<boolean> & {
@@ -19,6 +20,7 @@ export class BooleanValidator<
 	coerce(value: any): boolean | null {
 		if (value === 'true') return true;
 		if (value === 'false') return false;
+		if (value === NULL) return null;
 		const DEFAULT_VALUE = this.$schema.default ?? null;
 		if (value === null || value === undefined) return DEFAULT_VALUE;
 		if (typeof value === 'boolean') return value;
@@ -35,6 +37,7 @@ export class BooleanValidator<
 		return DEFAULT_VALUE;
 	}
 	stringify = (value: any) => {
+		if (value === null) return NULL;
 		return this.coerce(value) ? String(value) : '';
 	};
 }

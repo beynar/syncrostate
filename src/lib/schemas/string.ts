@@ -1,3 +1,4 @@
+import { NULL } from '$lib/constants.js';
 import { BaseValidator, type BaseSchema } from './base.js';
 
 export type StringSchema = BaseSchema<string> & {
@@ -39,11 +40,13 @@ export class StringValidator<
 	}
 
 	coerce(value: any): string | null {
+		if (value === NULL) return null;
 		const DEFAULT_VALUE = this.$schema.default ?? null;
 		return this.validate(value) ?? DEFAULT_VALUE;
 	}
 
 	stringify = (value: any) => {
+		if (value === null) return NULL;
 		return this.coerce(value)?.toString() ?? '';
 	};
 }

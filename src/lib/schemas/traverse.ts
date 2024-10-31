@@ -1,55 +1,32 @@
 import type { ObjectShape } from './object.js';
 import * as Y from 'yjs';
 import type { Validator } from './schema.js';
+import type { BaseValidator } from './base.js';
+import { INITIALIZED } from '$lib/constants.js';
+import type { SyncedCache } from '$lib/proxys/syncedCache.svelte.js';
 
 // REMINDER OF THE MENTAL MODEL
 // This function MUST be executed after the offline => remote synchronisation
 // Otherwise, the local changes will be lost and any other peer will have their changes overwritten
 
 const getTypeFromParent = <T extends Y.AbstractType<any>>(
-	parent: Y.Map<any> | Y.Array<any> | Y.Doc,
+	parent: Y.Map<any> | Y.Array<any>,
 	key: any,
 	instance: new () => T
 ): T => {
-	const isDoc = parent instanceof Y.Doc;
 	const isArray = parent instanceof Y.Array;
 	const type = new instance();
-	const typeInParent = (
-		isDoc ? parent.share.get(key) : isArray ? parent.get(Number(key)) : parent.get(key)
-	) as T;
+	const typeInParent = (isArray ? parent.get(Number(key)) : parent.get(key)) as T;
 
 	const setAndReturnType = () => {
-		if (!isDoc) {
-			if (isArray) {
-				parent.delete(Number(key));
-				parent.insert(Number(key), [type]);
-			} else {
-				parent.delete(key);
-				parent.set(key, type);
-			}
-			return type as T;
+		if (isArray) {
+			parent.delete(Number(key));
+			parent.insert(Number(key), [type]);
 		} else {
-			// Ensure the type is deleted from the doc
-			parent.share.delete(key);
-			if (type instanceof Y.Text) {
-				return parent.getText(key);
-			}
-			if (type instanceof Y.Array) {
-				return parent.getArray(key);
-			}
-			if (type instanceof Y.Map) {
-				return parent.getMap(key);
-			}
-			if (type instanceof Y.XmlText) {
-				return parent.getText(key);
-			}
-			if (type instanceof Y.XmlFragment) {
-				return parent.getXmlFragment(key);
-			}
-			if (type instanceof Y.XmlElement) {
-				return parent.getXmlElement(key);
-			}
+			parent.delete(key);
+			parent.set(key, type);
 		}
+		return type as T;
 	};
 	if (!typeInParent || typeInParent._item?.deleted) {
 		return setAndReturnType() as T;
@@ -62,55 +39,59 @@ const getTypeFromParent = <T extends Y.AbstractType<any>>(
 };
 
 export const traverseShape = ({
-	doc = new Y.Doc(),
 	shape,
+	enforceDefault = false,
+	follower,
 	path = '',
-	parent = doc,
+	parent,
+	syncedCache,
 	onType
 }: {
-	doc?: Y.Doc;
 	shape: ObjectShape;
-	parent?: Y.Map<any> | Y.Doc;
+	enforceDefault?: boolean;
+	parent: Y.Map<any>;
 	path?: string;
-	onType: (p: { path: string; type: Y.AbstractType<any>; validator: Validator }) => void;
+	follower?: any;
+	syncedCache: SyncedCache;
+	onType?: (path: string, type: Y.AbstractType<any>) => void;
 }) => {
-	const isDocInitialized = doc.getText('$$$$$').toString() === '$$$$$';
+	// const isDocInitialized = doc.getText(INITIALIZED).toString() === INITIALIZED;
 	const isRoot = parent instanceof Y.Doc;
-	const validate = (
-		key: string,
-		newPath: string,
-		validator: Validator,
-		parent: Y.Map<any> | Y.Doc
-	) => {
+	const validate = (key: string, newPath: string, validator: Validator, parent: Y.Map<any>) => {
 		switch (validator.$schema.kind) {
 			case 'richText':
 			case 'boolean':
 			case 'date':
+			case 'number':
 			case 'string':
 			case 'enum': {
-				const yType = getTypeFromParent(parent, key, Y.Text);
-
-				if (validator.$schema.default) {
-					if (!yType.length) {
-						yType.applyDelta([{ insert: validator.stringify(validator.$schema.default) }]);
-					}
-					// TODO implement default
-					// yType.insert(0, validator.$schema.default || '');
+				const yText = getTypeFromParent(parent, key, Y.Text);
+				const DEFAULT_VALUE = follower?.[key] || validator.$schema.default;
+				if (DEFAULT_VALUE && (!yText.length || enforceDefault)) {
+					yText.applyDelta([
+						{ insert: (validator as BaseValidator<any, false, false>).stringify(DEFAULT_VALUE) }
+					]);
 				}
-				onType({
+
+				syncedCache.integrate({
 					path: newPath,
 					validator,
-					type: yType
+					type: yText,
+					isRoot
 				});
+				onType?.(newPath, yText);
+
 				break;
 			}
 			case 'array': {
 				const yArray = getTypeFromParent(parent, key, Y.Array);
-				onType({
+				syncedCache.integrate({
 					path: newPath,
 					validator,
-					type: yArray
+					type: yArray,
+					isRoot
 				});
+				onType?.(newPath, yArray);
 				const arrayValidator = validator.$schema.shape as Validator;
 
 				if (!yArray.length) {
@@ -131,26 +112,30 @@ export const traverseShape = ({
 							case 'string':
 							case 'enum': {
 								const yText = getTypeFromParent(yArray, i, Y.Text);
-								onType({
+								syncedCache.integrate({
 									path: arrayPath,
 									validator: arrayValidator,
 									type: yText
 								});
+								onType?.(arrayPath, yText);
 								break;
 							}
 							case 'object': {
 								const yObject = getTypeFromParent(yArray, i, Y.Map);
 
-								onType({
+								syncedCache.integrate({
 									path: arrayPath,
 									validator: arrayValidator,
 									type: yObject
 								});
+								onType?.(arrayPath, yObject);
 								traverseShape({
 									shape: arrayValidator.$schema.shape as ObjectShape,
 									path: arrayPath,
+									follower: follower?.[key]?.[i],
+									onType,
 									parent: yObject,
-									onType
+									syncedCache
 								});
 								break;
 							}
@@ -169,13 +154,16 @@ export const traverseShape = ({
 				// TODO implement default / nullable / optionnal safety
 				// yType.insert(0, validator.$schema.default || '');
 				const yObject = getTypeFromParent(parent, key, Y.Map);
-
-				onType({ path: newPath, type: yObject, validator });
+				syncedCache.integrate({ path: newPath, type: yObject, validator, isRoot });
+				onType?.(newPath, yObject);
 				traverseShape({
 					shape: validator.$schema.shape as ObjectShape,
 					path: newPath,
 					parent: yObject,
-					onType
+					follower: follower?.[key] || validator.$schema.default,
+					enforceDefault,
+					onType,
+					syncedCache
 				});
 				break;
 			}
@@ -186,8 +174,12 @@ export const traverseShape = ({
 		validate(key, path ? `${path}.${key}` : key, validator, parent);
 	}
 
-	if (!isDocInitialized && isRoot) {
-		doc.getText('$$$$$').applyDelta([{ insert: '$$$$$' }]);
-	}
-	return doc;
+	// if (!isDocInitialized && isRoot) {
+	// 	const initializedText = doc.getText(INITIALIZED);
+	// 	const length = initializedText.length;
+	// 	initializedText.applyDelta(
+	// 		length ? [{ delete: length }, { insert: INITIALIZED }] : [{ insert: INITIALIZED }]
+	// 	);
+	// }
+	// return doc;
 };
