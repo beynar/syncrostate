@@ -7,7 +7,10 @@ import type { ObjectShape } from '$lib/schemas/object.js';
 import { SyncedCache } from './syncedCache.svelte.js';
 import { UNDEFINED } from '$lib/constants.js';
 import { BROWSER } from 'esm-env';
+import { onMount } from 'svelte';
 
+import { createClient } from '@liveblocks/client';
+import { LiveblocksYjsProvider } from '@liveblocks/yjs';
 type StateExtras = {
 	$doc: Y.Doc;
 	$connected: boolean;
@@ -20,27 +23,46 @@ type StateExtras = {
 	$awareness: Awareness;
 };
 
+const remoteTest = true;
 export function syncedState<T extends ObjectShape>({
 	schema
 }: {
 	schema: T;
 }): SchemaOutput<T> & StateExtras {
 	let currentKeys = new Set<string>();
-	let remotlySynced = $state<boolean>(false);
+	let remotlySynced = $state<boolean>(!remoteTest);
 	let locallySynced = $state<boolean>(false);
 	let connectionStatus = $state<'CONNECTED' | 'DISCONNECTED' | 'CONNECTING'>('DISCONNECTED');
 	let undoManager = $state<Y.UndoManager>();
 
 	const syncedCache = new SyncedCache(undoManager);
 	const doc = new Y.Doc();
-	const awareness = new Awareness(doc);
 
-	traverseShape({
-		shape: schema,
-		parent: doc.getMap('$state'),
-		follower: {},
-		syncedCache
-	});
+	if (remoteTest) {
+		const client = createClient({
+			publicApiKey: 'pk_prod_TXiiCUekyBO_3gntGdLDEyqmJ0Qc6AqyfAoz0Pntk5JlzC4sSWFmjh4cP73rWXpm'
+		});
+		const { room, leave } = client.enterRoom('your-room-id');
+		const yProvider = new LiveblocksYjsProvider(room, doc);
+		yProvider.on('synced', (e) => {
+			console.log('synced', e, room.getPresence());
+			remotlySynced = true;
+			traverseShape({
+				shape: schema,
+				parent: doc.getMap('$state'),
+				follower: {},
+				syncedCache
+			});
+		});
+	} else {
+		traverseShape({
+			shape: schema,
+			parent: doc.getMap('$state'),
+			follower: {},
+			syncedCache
+		});
+	}
+	const awareness = new Awareness(doc);
 
 	const proxy = new Proxy(
 		{
@@ -48,7 +70,9 @@ export function syncedState<T extends ObjectShape>({
 			$state: doc.getMap('$state'),
 			$connected: false,
 			$connectionStatus: 'DISCONNECTED',
-			$remotlySynced: remotlySynced,
+			get $remotlySynced() {
+				return remotlySynced;
+			},
 			$locallySynced: locallySynced,
 			$undo: () => {
 				if (undoManager?.canUndo()) {

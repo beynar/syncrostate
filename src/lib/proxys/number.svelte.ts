@@ -1,7 +1,4 @@
-import type { Primitive } from '$lib/types.js';
 import * as Y from 'yjs';
-import { SvelteDate } from 'svelte/reactivity';
-import type { Validator } from '$lib/schemas/schema.js';
 import type { NumberValidator } from '$lib/schemas/number.js';
 
 export class SyncedNumber {

@@ -1,7 +1,7 @@
 import type { Validator } from '$lib/schemas/schema.js';
 import { SvelteMap } from 'svelte/reactivity';
 import * as Y from 'yjs';
-import type { ObjectShape, ObjectValidator } from '$lib/schemas/object.js';
+import type { ObjectValidator } from '$lib/schemas/object.js';
 import type { BaseValidator } from '$lib/schemas/base.js';
 import { SyncedEnum } from './enum.svelte.js';
 import { SyncedDate } from './date.svelte.js';

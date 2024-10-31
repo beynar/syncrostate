@@ -1,4 +1,3 @@
-import type { Schema } from '$lib/types.js';
 import * as Y from 'yjs';
 import { toJSON } from '$lib/toJSON.js';
 import { traverseShape } from '$lib/schemas/traverse.js';

@@ -1,8 +1,5 @@
-import type { Primitive } from '$lib/types.js';
-import { SvelteMap } from 'svelte/reactivity';
+import type { RichTextValidator } from '$lib/schemas/richtext.js';
 import * as Y from 'yjs';
-
-const INTERNAL = 'INTERNAL';
 
 type Delta =
 	| {
@@ -94,6 +91,7 @@ const createRecursiveProxy = (
 
 export class SyncedRichText {
 	INTERNAL_ID = crypto.randomUUID();
+	validator: RichTextValidator;
 	private yType: Y.Text;
 
 	#textContent = $state<string>('');
@@ -107,10 +105,11 @@ export class SyncedRichText {
 		}
 	});
 
-	constructor(yType: Y.Text, schema: Primitive) {
+	constructor(yType: Y.Text, validator: RichTextValidator) {
 		this.yType = yType;
 		this.#textContent = yType.toString();
 		this.#content = deltaToRichText(this.yType.toDelta());
+		this.validator = validator;
 
 		this.yType.observe((e, transact) => {
 			if (transact.origin !== this.INTERNAL_ID) {

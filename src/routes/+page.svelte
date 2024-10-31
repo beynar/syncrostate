@@ -3,6 +3,8 @@
 	import { SvelteDate, SvelteMap } from 'svelte/reactivity';
 	import Name from './Name.svelte';
 	import { y } from '$lib/schemas/schema.js';
+	import { createClient } from '@liveblocks/client';
+
 	const synced = syncedState({
 		schema: {
 			name: y.string().default('John'),
@@ -27,48 +29,48 @@
 	);
 </script>
 
-{JSON.stringify(synced)}
+{synced.$remotlySynced}
+{#if synced.$remotlySynced}
+	<Name name={synced.name} />
+	<div class="grid gap-2">
+		<button
+			onclick={() => {
+				synced.gender = synced.gender === 'male' ? 'female' : 'male';
+			}}>gender: {synced.gender}</button
+		>
+		<button
+			onclick={() => {
+				synced.gender = null;
+			}}>set null gender</button
+		>
+		<button
+			onclick={() => {
+				synced.birthday && synced.birthday.setDate(synced.birthday.getDate() + 1);
+			}}>birthday: {synced.birthday?.toLocaleDateString('fr-FR')}</button
+		>
+		<button
+			onclick={() => {
+				synced.birthday ? (synced.birthday = null) : (synced.birthday = new Date());
+			}}>birthday: {synced.birthday ? 'not null' : 'null'}</button
+		>
+		<button
+			onclick={() => {
+				synced.name = synced.name === 'John' ? 'Jane' : 'John';
+			}}>Name: {synced.name}</button
+		>
+		<button
+			onclick={() => {
+				synced.firstName = synced.firstName === 'Doe' ? 'Smith' : 'Doe';
+			}}>here Name: {synced.firstName}</button
+		>
 
-<Name name={synced.name} />
-<div class="grid gap-2">
-	<button
-		onclick={() => {
-			synced.gender = synced.gender === 'male' ? 'female' : 'male';
-		}}>gender: {synced.gender}</button
-	>
-	<button
-		onclick={() => {
-			synced.gender = null;
-		}}>set null gender</button
-	>
-	<!-- <button
-		onclick={() => {
-			synced.birthday && synced.birthday.setDate(synced.birthday.getDate() + 1);
-		}}>birthday: {synced.birthday?.toLocaleDateString('fr-FR')}</button
-	> -->
-	<button
-		onclick={() => {
-			synced.birthday ? (synced.birthday = null) : (synced.birthday = new Date());
-		}}>birthday: {synced.birthday ? 'not null' : 'null'}</button
-	>
-	<button
-		onclick={() => {
-			synced.name = synced.name === 'John' ? 'Jane' : 'John';
-		}}>Name: {synced.name}</button
-	>
-	<button
-		onclick={() => {
-			synced.firstName = synced.firstName === 'Doe' ? 'Smith' : 'Doe';
-		}}>here Name: {synced.firstName}</button
-	>
-
-	<!-- <button
+		<!-- <button
 		onclick={() => {
 			delete synced.name;
 		}}>delete name</button
 	> -->
 
-	<!-- <button
+		<!-- <button
 		onclick={() => {
 			synced.father.name = synced.father.name === 'Alfred' ? 'Bob' : 'Alfred';
 		}}>Father: {synced.father.name}</button
@@ -79,8 +81,8 @@
 			synced.age = synced.age === null ? Math.random() : null;
 		}}>Age: {synced.age}</button
 	> -->
-</div>
-<!-- {date}
+	</div>
+	<!-- {date}
 <button
 	onclick={() => {
 		state.father.father.name = 'Jane' + Math.random();
@@ -112,3 +114,4 @@
 	}}>number</button
 >
 <hr /> -->
+{/if}

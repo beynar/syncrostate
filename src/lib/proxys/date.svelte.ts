@@ -4,12 +4,39 @@ import { SvelteDate } from 'svelte/reactivity';
 import { NULL } from '$lib/constants.js';
 import { untrack } from 'svelte';
 
+const SvelteDateProxy = (onSet: () => void) => {
+	const date = new SvelteDate();
+	return new Proxy(date, {
+		get(target, prop) {
+			const result = Reflect.get(target, prop);
+			if (typeof result === 'function') {
+				return (...args: any[]) => {
+					const ret = result.call(target, ...args);
+					if (typeof prop === 'string' && prop.startsWith('set')) {
+						onSet();
+					}
+					return ret;
+				};
+			} else {
+				return result;
+			}
+		}
+	});
+};
+
 export class SyncedDate {
 	INTERNAL_ID = crypto.randomUUID();
 	yType: Y.Text;
 	validator: DateValidator;
 	rawValue = $state<string>('');
-	date = new SvelteDate();
+	// date = new SvelteDate();
+	date = SvelteDateProxy(() => {
+		const newRawValue = this.date.toISOString();
+		const isNull = this.date.getTime() === 0;
+		if (newRawValue !== this.rawValue && !isNull) {
+			this.setYType(newRawValue);
+		}
+	});
 
 	get value() {
 		return this.rawValue === NULL || !this.rawValue ? null : this.date;
@@ -60,14 +87,14 @@ export class SyncedDate {
 		this.yType.observe(this.observe);
 
 		// Listen to date changes triggered by the user while using date methods
-		$effect(() => {
-			const newRawValue = this.date.toISOString();
-			const isNull = this.date.getTime() === 0;
-			untrack(() => {
-				if (newRawValue !== this.rawValue && !isNull) {
-					this.setYType(newRawValue);
-				}
-			});
-		});
+		// $effect(() => {
+		// 	const newRawValue = this.date.toISOString();
+		// 	const isNull = this.date.getTime() === 0;
+		// 	untrack(() => {
+		// 		if (newRawValue !== this.rawValue && !isNull) {
+		// 			this.setYType(newRawValue);
+		// 		}
+		// 	});
+		// });
 	}
 }
