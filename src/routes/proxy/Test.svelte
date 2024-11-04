@@ -1,12 +1,11 @@
 <script lang="ts">
-	import { onMount } from 'svelte';
-
 	let {
 		name
 	}: {
 		name: string;
 	} = $props();
 
+	$inspect({ name });
 	let div = $state<HTMLDivElement>();
 
 	$effect(() => {

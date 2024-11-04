@@ -44,12 +44,12 @@ type NORO<N extends boolean, O extends boolean, T> = N extends true
 		: T;
 
 type InferSchemaType<T> =
-	T extends BaseValidator<infer S, infer O, infer N>
-		? NORO<N, O, S extends BaseSchema<infer T> ? T : never>
-		: T extends ArrayValidator<infer Shape>
-			? InferSchemaType<Shape>[]
-			: T extends ObjectValidator<infer Shape>
-				? SchemaOutput<Shape>
+	T extends ObjectValidator<infer Shape, infer O, infer N>
+		? NORO<N, O, SchemaOutput<Shape>>
+		: T extends BaseValidator<infer S, infer O, infer N>
+			? NORO<N, O, S extends BaseSchema<infer T> ? T : never>
+			: T extends ArrayValidator<infer Shape>
+				? InferSchemaType<Shape>[]
 				: never;
 
 export type SchemaOutput<T extends ObjectShape> = Simplify<{

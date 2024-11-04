@@ -9,7 +9,11 @@ export type ObjectSchema<T extends ObjectShape> = BaseSchema<any> & {
 	shape: T;
 };
 
-export class ObjectValidator<T extends ObjectShape> {
+export class ObjectValidator<
+	T extends ObjectShape,
+	O extends boolean = false,
+	N extends boolean = false
+> {
 	$schema: ObjectSchema<T>;
 	constructor(shape: T) {
 		this.$schema = {
@@ -18,6 +22,16 @@ export class ObjectValidator<T extends ObjectShape> {
 			nullable: false,
 			shape
 		};
+	}
+
+	optional() {
+		this.$schema.optional = true;
+		return this as ObjectValidator<T, true, N>;
+	}
+
+	nullable() {
+		this.$schema.nullable = true;
+		return this as ObjectValidator<T, O, true>;
 	}
 
 	validate(value: any): SchemaOutput<T> | null {

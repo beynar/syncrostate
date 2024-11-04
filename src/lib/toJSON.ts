@@ -1,5 +1,5 @@
 import * as Y from 'yjs';
-import type { SyncedStates } from './proxys/syncedCache.svelte.js';
+import type { SyncedStates } from './integrator.js';
 
 export const toJSON = (path: string, type: Y.Map<any> | Y.Doc, syncedStates: SyncedStates) => {
 	if (type instanceof Y.Array) {

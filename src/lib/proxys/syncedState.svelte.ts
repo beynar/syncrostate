@@ -1,16 +1,13 @@
-import { traverseShape } from '../schemas/traverse.js';
 import type { SchemaOutput } from '../schemas/schema.js';
 import * as Y from 'yjs';
 import { Awareness } from 'y-protocols/awareness';
-import { objectHandler } from './object.svellte.js';
-import type { ObjectShape } from '$lib/schemas/object.js';
-import { SyncedCache } from './syncedCache.svelte.js';
-import { UNDEFINED } from '$lib/constants.js';
-import { BROWSER } from 'esm-env';
-import { onMount } from 'svelte';
-
+import { objectHandler, observeObject } from './object.svelte.js';
+import { ObjectValidator, type ObjectShape } from '$lib/schemas/object.js';
+import { Integrator } from '../integrator.js';
 import { createClient } from '@liveblocks/client';
 import { LiveblocksYjsProvider } from '@liveblocks/yjs';
+import { setContext, untrack } from 'svelte';
+
 type StateExtras = {
 	$doc: Y.Doc;
 	$connected: boolean;
@@ -23,53 +20,81 @@ type StateExtras = {
 	$awareness: Awareness;
 };
 
-const remoteTest = true;
+const remoteTest = false;
 export function syncedState<T extends ObjectShape>({
 	schema
 }: {
 	schema: T;
 }): SchemaOutput<T> & StateExtras {
-	let currentKeys = new Set<string>();
 	let remotlySynced = $state<boolean>(!remoteTest);
 	let locallySynced = $state<boolean>(false);
 	let connectionStatus = $state<'CONNECTED' | 'DISCONNECTED' | 'CONNECTING'>('DISCONNECTED');
-	let undoManager = $state<Y.UndoManager>();
-
-	const syncedCache = new SyncedCache(undoManager);
+	const schemaState = $state(schema);
+	const integrator = new Integrator();
 	const doc = new Y.Doc();
+	const awareness = new Awareness(doc);
+	const schemaValidator = new ObjectValidator(schemaState);
+	const stateMap = doc.getMap('$state');
+	const syncedStateContext = $state({
+		id: crypto.randomUUID()
+	});
+
+	$inspect(Array.from(integrator.syncedStates.keys()));
+
+	setContext('SYNCED_STATE_CONTEXT', syncedStateContext);
+	const stateObserver = observeObject({
+		path: '',
+		validator: schemaValidator,
+		yType: stateMap,
+		integrator
+	});
 
 	if (remoteTest) {
 		const client = createClient({
 			publicApiKey: 'pk_prod_TXiiCUekyBO_3gntGdLDEyqmJ0Qc6AqyfAoz0Pntk5JlzC4sSWFmjh4cP73rWXpm'
 		});
-		const { room, leave } = client.enterRoom('your-room-id');
+		const { room } = client.enterRoom('your-room-id-4');
 		const yProvider = new LiveblocksYjsProvider(room, doc);
-		yProvider.on('synced', (e) => {
-			console.log('synced', e, room.getPresence());
-			remotlySynced = true;
-			traverseShape({
-				shape: schema,
-				parent: doc.getMap('$state'),
-				follower: {},
-				syncedCache
-			});
+		yProvider.on('synced', (synced: boolean) => {
+			if (synced) {
+				integrator.integrateObject({
+					validator: schemaValidator,
+					parent: doc,
+					cleanUp: false,
+					key: '',
+					path: ''
+				});
+				remotlySynced = true;
+				stateMap.observe(stateObserver);
+			}
 		});
 	} else {
-		traverseShape({
-			shape: schema,
-			parent: doc.getMap('$state'),
-			follower: {},
-			syncedCache
+		console.log('integrate');
+		integrator.integrateObject({
+			validator: schemaValidator,
+			parent: doc,
+			cleanUp: false,
+			key: '',
+			path: ''
 		});
+		stateMap.observe(stateObserver);
 	}
-	const awareness = new Awareness(doc);
 
-	const proxy = new Proxy(
+	console.log('init');
+
+	const undoManager = new Y.UndoManager(doc.getMap('$state'));
+
+	return new Proxy(
 		{
 			$doc: doc,
-			$state: doc.getMap('$state'),
+			$state: stateMap,
 			$connected: false,
-			$connectionStatus: 'DISCONNECTED',
+			$connectionStatus: connectionStatus,
+			$destroy: () => {
+				stateMap.unobserve(stateObserver);
+				undoManager.destroy();
+				awareness.destroy();
+			},
 			get $remotlySynced() {
 				return remotlySynced;
 			},
@@ -87,8 +112,6 @@ export function syncedState<T extends ObjectShape>({
 			$awareness: awareness,
 			$snapshot: {}
 		} as any,
-		objectHandler(schema, '', doc.getMap('$state'), syncedCache)
+		objectHandler(schemaState, '', doc.getMap('$state'), integrator)
 	);
-
-	return proxy;
 }

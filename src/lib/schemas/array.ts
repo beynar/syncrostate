@@ -8,7 +8,11 @@ export type ArraySchema<T extends Validator> = BaseSchema<T['$schema']['kind'][]
 	max?: number;
 };
 
-export class ArrayValidator<T extends Validator> {
+export class ArrayValidator<
+	T extends Validator,
+	O extends boolean = false,
+	N extends boolean = false
+> {
 	$schema: ArraySchema<T>;
 	constructor(shape: T) {
 		this.$schema = {
@@ -17,6 +21,16 @@ export class ArrayValidator<T extends Validator> {
 			nullable: false,
 			shape
 		};
+	}
+
+	optional() {
+		this.$schema.optional = true;
+		return this as ArrayValidator<T, true, N>;
+	}
+
+	nullable() {
+		this.$schema.nullable = true;
+		return this as ArrayValidator<T, O, true>;
 	}
 
 	min(length: number) {

@@ -1,11 +1,9 @@
 import * as Y from 'yjs';
 import type { NumberValidator } from '$lib/schemas/number.js';
+import { BaseSyncedType } from './base.svelte.js';
 
-export class SyncedNumber {
-	INTERNAL_ID = crypto.randomUUID();
-	yType: Y.Text;
+export class SyncedNumber extends BaseSyncedType {
 	validator: NumberValidator;
-	rawValue = $state<string>('');
 
 	get value() {
 		return this.validator.coerce(this.rawValue);
@@ -15,29 +13,11 @@ export class SyncedNumber {
 		if (value === null && !this.validator.$schema.nullable) {
 			return;
 		}
-		const length = this.rawValue.length;
-		this.rawValue = this.validator.stringify(value);
-		this.yType.doc?.transact(() => {
-			this.yType.applyDelta(
-				length ? [{ delete: length }, { insert: this.rawValue }] : [{ insert: this.rawValue }]
-			);
-		}, this.INTERNAL_ID);
+		this.setYValue(this.validator.stringify(value));
 	}
 
-	observe = (e: Y.YEvent<Y.Text>, transact: Y.Transaction) => {
-		if (transact.origin !== this.INTERNAL_ID) {
-			this.rawValue = e.target.toString();
-		}
-	};
-
-	destroy = () => {
-		this.yType.unobserve(this.observe);
-	};
 	constructor(yType: Y.Text, validator: NumberValidator) {
-		this.yType = yType;
+		super(yType);
 		this.validator = validator;
-		this.rawValue = yType.toString();
-		this.yType.observe(this.observe);
-		this.yType.observe((e, transact) => {});
 	}
 }
