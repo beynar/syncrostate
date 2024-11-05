@@ -43,7 +43,8 @@ export const isMissingOptionnal = ({
 }) => {
 	const exists = parent instanceof Y.Map ? parent.has(String(key)) : !!parent.get(Number(key));
 	const isMissingOptionnal = validator.$schema.optional && !exists;
-	return isMissingOptionnal;
+	const hasDefault = validator.$schema.default !== undefined;
+	return isMissingOptionnal && !hasDefault;
 };
 
 export const getTypeFromParent = <T extends Y.AbstractType<any>>({
