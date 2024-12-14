@@ -13,7 +13,28 @@ export class BaseValidator<
 	N extends boolean = false
 > {
 	$schema: S;
+	validateType(value: any): S extends BaseSchema<infer T> ? T | null : any {
+		// @ts-expect-error
+		return null;
+	}
 
+	// Convert data to string format for display/storage
+	stringify = (value: any) => {
+		return '';
+	};
+
+	//  Convert a string to the correct type.
+	coerce(value: any): S extends BaseSchema<infer T> ? T | null : any {
+		// @ts-expect-error
+		return null;
+	}
+
+	// Returns the valid value or null. Ensure data strictly matches your schema
+	validate(value: any) {
+		if (value === null && !this.$schema.nullable) return null;
+		if (value === undefined && !this.$schema.optional) return null;
+		return this.validateType(value);
+	}
 	constructor(schema: S) {
 		this.$schema = schema;
 	}
@@ -32,7 +53,4 @@ export class BaseValidator<
 		this.$schema.default = value;
 		return this as BaseValidator<S, O, N>;
 	}
-	stringify = (value: any) => {
-		return '';
-	};
 }

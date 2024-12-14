@@ -102,6 +102,7 @@ export const objectHandler = (
 			const syncedState = integrator.syncedStates.get(newPath);
 			if (!syncedState) {
 				const validator = shape[key];
+
 				if (validator) {
 					integrator.integrateType({
 						path,

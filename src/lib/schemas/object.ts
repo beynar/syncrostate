@@ -36,7 +36,10 @@ export class ObjectValidator<
 
 	validate(value: any): SchemaOutput<T> | null {
 		if (typeof value !== 'object' || value === null) return null;
-		return value as SchemaOutput<T>;
+		const allValid = Object.entries(this.$schema.shape).every(([key, validator]) => {
+			return validator.validate(value[key]) !== null;
+		});
+		return allValid ? (value as SchemaOutput<T>) : null;
 	}
 	coerce(value: any): SchemaOutput<T> | null {
 		return this.validate(value);

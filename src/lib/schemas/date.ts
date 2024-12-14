@@ -27,7 +27,7 @@ export class DateValidator<
 		return !isNaN(new Date(value).getTime());
 	}
 
-	validate(value: any): Date | null {
+	validateType(value: any): Date | null {
 		if (value instanceof Date) return value;
 		if (typeof value === 'string') {
 			if (!this.isStringADate(value)) return null;

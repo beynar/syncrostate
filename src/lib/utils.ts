@@ -19,7 +19,10 @@ export const findArrayPaths = (paths: IterableIterator<string>, basePath?: strin
 
 export const applyDefaultOrValue = (value: any, validator: BaseValidator<any>, yText: Y.Text) => {
 	const DEFAULT_VALUE = value === null ? null : (value ?? validator.$schema.default);
-
+	const isValid = validator.validate(DEFAULT_VALUE);
+	if (!isValid) {
+		return;
+	}
 	if (DEFAULT_VALUE !== undefined && (!yText.length || value !== undefined)) {
 		const length = yText.length;
 		const stringifiedDefaultValue = (validator as BaseValidator<any>).stringify(DEFAULT_VALUE);

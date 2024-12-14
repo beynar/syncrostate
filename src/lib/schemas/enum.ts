@@ -15,7 +15,7 @@ export class EnumValidator<
 		super({ kind: 'enum', optional: false, nullable: false, values: new Set(values) });
 	}
 
-	validate(value: any): T | null {
+	validateType(value: any): T | null {
 		if (this.$schema.values.has(value)) return value;
 		return null;
 	}

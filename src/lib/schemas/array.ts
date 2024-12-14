@@ -1,5 +1,5 @@
-import type { Schema, Validator } from './schema.js';
-import { type BaseSchema, BaseValidator } from './base.js';
+import type { Validator } from './schema.js';
+import { type BaseSchema } from './base.js';
 
 export type ArraySchema<T extends Validator> = BaseSchema<T['$schema']['kind'][]> & {
 	kind: 'array';
@@ -33,19 +33,11 @@ export class ArrayValidator<
 		return this as ArrayValidator<T, O, true>;
 	}
 
-	min(length: number) {
-		this.$schema.min = length;
-		return this as ArrayValidator<T>;
-	}
-
-	max(length: number) {
-		this.$schema.max = length;
-		return this as ArrayValidator<T>;
-	}
-
 	validate(value: any): T[] | null {
 		if (typeof value !== 'object' || value === null) return null;
-		return value as T[];
+		if (!Array.isArray(value)) return null;
+		const allValid = value.every((item) => this.$schema.shape.validate(item));
+		return allValid ? (value as T[]) : null;
 	}
 
 	coerce(value: any): T[] | null {

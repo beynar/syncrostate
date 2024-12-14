@@ -31,7 +31,7 @@ export class StringValidator<
 		return this as StringValidator<O, N>;
 	}
 
-	validate(value: any): string | null {
+	validateType(value: any): string | null {
 		if (typeof value !== 'string') return null;
 		if (this.$schema.min && value.length < this.$schema.min) return null;
 		if (this.$schema.max && value.length > this.$schema.max) return null;

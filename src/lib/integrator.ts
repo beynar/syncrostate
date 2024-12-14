@@ -20,6 +20,7 @@ import {
 	getTypeFromParent,
 	isMissingOptionnal
 } from './utils.js';
+import type { ArrayValidator } from './schemas/array.js';
 
 export type SyncedState =
 	| {
@@ -178,7 +179,7 @@ export class Integrator {
 		value
 	}: {
 		validator: Validator;
-		key: string;
+		key: string | number;
 		path: string;
 		parent: Y.Map<any> | Y.Array<any>;
 		cleanUp?: boolean;
@@ -210,70 +211,20 @@ export class Integrator {
 				break;
 			}
 			case 'array': {
-				const yArray = this.syncType({
-					path,
-					key,
-					instance: Y.Array,
-					validator,
-					parent
-				});
-				// onType?.(newPath, yArray);
-				const arrayValidator = validator.$schema.shape as Validator;
-
-				if (!yArray.length) {
-					// TODO handle optional / nullable or default here
-				} else {
-					for (let i = 0; ; i++) {
-						const arrayPath = `${newPath}.${i}`;
-						const arrayType = yArray.get(i);
-						const arrayValue = value?.[i];
-
-						if (!arrayType) {
-							// TODO handle optional / nullable or default here
-							break;
-						}
-						switch (arrayValidator.$schema.kind) {
-							case 'richText':
-							case 'boolean':
-							case 'date':
-							case 'string':
-							case 'enum': {
-								const yText = this.syncType({
-									path: arrayPath,
-									key: i,
-									validator: arrayValidator,
-									instance: Y.Text,
-									parent: yArray
-								});
-								applyDefaultOrValue(
-									arrayValue,
-									validator as BaseValidator<any, false, false>,
-									yText
-								);
-
-								// onType?.(arrayPath, yText);
-								break;
-							}
-
-							case 'object': {
-								this.integrateObject({
-									cleanUp,
-									validator: arrayValidator as ObjectValidator<any>,
-									path: arrayPath,
-									value: arrayValue,
-									parent: yArray,
-									key: i
-								});
-								break;
-							}
-
-							case 'array': {
-								// Not implemented
-								break;
-							}
-						}
-					}
+				if (isMissingOptionnal({ validator, parent, key })) {
+					break;
 				}
+
+				// onType?.(newPath, yArray);
+
+				this.integrateArray({
+					validator: validator.$schema.shape as ArrayValidator<any>,
+					path,
+					parent,
+					key,
+					value
+				});
+
 				break;
 			}
 
@@ -294,6 +245,53 @@ export class Integrator {
 
 				break;
 			}
+		}
+	};
+
+	integrateArray = ({
+		validator,
+		path,
+		parent,
+		key,
+		value,
+		cleanUp
+	}: {
+		validator: ArrayValidator<any>;
+		path: string;
+		parent: Y.Map<any> | Y.Array<any>;
+		key: string | number;
+		value?: any;
+		cleanUp?: boolean;
+	}) => {
+		const newPath = path ? `${path}.${key}` : `${key}`;
+		const internalValidator = validator.$schema.shape as Validator;
+		const yArray = this.syncType({
+			path,
+			key,
+			instance: Y.Array,
+			validator,
+			parent
+		});
+		if (!yArray.length) {
+			// TODO handle optional / nullable or default here
+		} else {
+		}
+		for (let i = 0; ; i++) {
+			const arrayPath = `${newPath}.${i}`;
+			const arrayType = yArray.get(i);
+			const arrayValue = value?.[i];
+
+			if (!arrayType) {
+				break;
+			}
+			this.integrateType({
+				validator: internalValidator,
+				value: arrayValue,
+				cleanUp,
+				key: i,
+				path: arrayPath,
+				parent: yArray
+			});
 		}
 	};
 

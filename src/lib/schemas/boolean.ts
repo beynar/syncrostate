@@ -13,10 +13,11 @@ export class BooleanValidator<
 		super({ kind: 'boolean', optional: false, nullable: false });
 	}
 
-	validate(value: any): boolean | null {
+	validateType(value: any): boolean | null {
 		if (typeof value !== 'boolean') return null;
 		return value;
 	}
+
 	coerce(value: any): boolean | null {
 		if (value === 'true') return true;
 		if (value === 'false') return false;
@@ -38,6 +39,8 @@ export class BooleanValidator<
 	}
 	stringify = (value: any) => {
 		if (value === null) return NULL;
-		return this.coerce(value) ? String(value) : '';
+		const coercedValue = this.coerce(value);
+		const validValue = this.validate(coercedValue);
+		return validValue ? String(coercedValue) : '';
 	};
 }

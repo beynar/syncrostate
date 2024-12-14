@@ -13,7 +13,7 @@ export class NumberValidator<
 		super({ kind: 'number', optional: false, nullable: false });
 	}
 
-	validate(value: any): number | null {
+	validateType(value: any): number | null {
 		if (typeof value !== 'number' || isNaN(Number(value))) return null;
 		return value;
 	}
