@@ -98,14 +98,7 @@
 
 		var x = (pointerPosition.x - stageAttrs.x) / (stageAttrs.scaleX || 1);
 		var y = (pointerPosition.y - stageAttrs.y) / (stageAttrs.scaleY || 1);
-		console.log({
-			pointerPosition,
-			scaleX: stageAttrs.scaleX,
-			scaleY: stageAttrs.scaleY,
-			stageAttrs,
-			x: isNaN(x) ? stageRef.getPointerPosition().x : x,
-			y: isNaN(y) ? stageRef.getPointerPosition().y : y
-		});
+
 		synced.nodes.push({
 			type: draggedShape,
 			x: isNaN(x) ? stageRef.getPointerPosition().x : x,
@@ -114,9 +107,6 @@
 		});
 	}}
 	class="relative bg-neutral-900"
-	onscroll={(e) => {
-		// console.log('scroll', e);
-	}}
 	ondragover={(e) => e.preventDefault()}
 >
 	<div class="absolute left-2 top-2 z-10 flex flex-col gap-2 border border-white/10 bg-black p-2">

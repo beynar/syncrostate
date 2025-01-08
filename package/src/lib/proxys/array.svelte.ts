@@ -1,6 +1,8 @@
 import * as Y from 'yjs';
 import type { ArrayValidator } from '../schemas/array.js';
 import { createSyncroState, type SyncroStates } from './syncroState.svelte.js';
+import type { SyncedObject } from './object.svelte.js';
+import { logError } from '../utils.js';
 
 function propertyToNumber(p: string | number | symbol) {
 	if (typeof p === 'string' && p.trim().length) {
@@ -17,6 +19,8 @@ export class SyncedArray<T extends any = any> {
 	INTERNAL_ID = crypto.randomUUID();
 	validator: ArrayValidator<any>;
 	yType: Y.Array<any>;
+	parent: SyncedObject | SyncedArray;
+	key: string | number;
 	syncroStates = $state<SyncroStates[]>([]);
 	proxy: any;
 
@@ -24,19 +28,19 @@ export class SyncedArray<T extends any = any> {
 		return this.syncroStates.map((state) => state.value);
 	}
 
-	private deleteProperty = (target: any, pArg: any) => {
+	deleteProperty = (target: any, pArg: any) => {
 		const p = propertyToNumber(pArg);
 		if (typeof p !== 'number') {
 			return true;
 		}
 
 		if (!this.validator.$schema.shape.$schema.optional) {
-			console.error('Can not delete non optional property', p);
+			logError('Can not delete non optional property', p);
 			return true;
 		}
 		const syncroState = this.syncroStates[p];
 		if (!syncroState) {
-			console.error('Index does not exist', p);
+			logError('Index does not exist', p);
 			return true;
 		}
 		syncroState.value = undefined;
@@ -46,15 +50,19 @@ export class SyncedArray<T extends any = any> {
 	set value(input: any[]) {
 		const { isValid, value } = this.validator.parse(input);
 		if (!isValid) {
-			console.error('Invalid value', { value });
+			logError('Invalid value', { value });
 			return;
 		}
 		this.transact(() => {
 			if (!value) {
-				// TODO: handle when value is null or undefined
-				// we should delete all states
-				// but i do not know how to mark this value as null or undefined
-				// in the yjs doc as it is not a YText;
+				if (value === undefined) {
+					this.parent.deleteProperty({}, this.key);
+				} else {
+					// TODO: handle when value is null
+					// we should delete all states
+					// but i do not know how to mark this value as null
+					// in the yjs doc as it is not a YText;
+				}
 			} else {
 				const remainingStates = this.syncroStates.slice(value.length);
 				remainingStates.forEach((state) => {
@@ -74,7 +82,7 @@ export class SyncedArray<T extends any = any> {
 							key: index,
 							forceNewType: true,
 							validator: this.validator.$schema.shape,
-							parent: this.yType,
+							parent: this,
 							value: item
 						});
 					}
@@ -90,14 +98,20 @@ export class SyncedArray<T extends any = any> {
 	constructor({
 		validator,
 		yType,
-		value
+		value,
+		parent,
+		key
 	}: {
 		validator: ArrayValidator<any>;
 		yType: Y.Array<any>;
 		value: any[];
+		parent: SyncedObject | SyncedArray;
+		key: string | number;
 	}) {
 		this.validator = validator;
 		this.yType = yType;
+		this.parent = parent;
+		this.key = key;
 		yType.observe(this.observe);
 		const shape = this.validator.$schema.shape;
 		this.proxy = new Proxy([], {
@@ -148,7 +162,7 @@ export class SyncedArray<T extends any = any> {
 							this.syncroStates[p as number] = createSyncroState({
 								key: p as number,
 								validator: shape,
-								parent: this.yType,
+								parent: this,
 								value
 							});
 						});
@@ -204,7 +218,7 @@ export class SyncedArray<T extends any = any> {
 			this.syncroStates[index] = createSyncroState({
 				key: index,
 				validator: this.validator.$schema.shape,
-				parent: this.yType,
+				parent: this,
 				value: value?.[index]
 			});
 		});
@@ -212,12 +226,10 @@ export class SyncedArray<T extends any = any> {
 
 	observe = (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => {
 		if (_transaction.origin === this.INTERNAL_ID) {
-			console.log('same origin');
 			return;
 		}
 		let start = 0;
 		e.delta.forEach(({ retain, delete: _delete, insert }) => {
-			// console.log({ retain, delete: _delete, insert });
 			if (retain) {
 				start += retain;
 			}
@@ -226,7 +238,6 @@ export class SyncedArray<T extends any = any> {
 				deleted.forEach((state) => {
 					state.destroy();
 				});
-				console.log({ deleted, start, _delete });
 				start -= _delete;
 			}
 			if (Array.isArray(insert)) {
@@ -237,7 +248,7 @@ export class SyncedArray<T extends any = any> {
 						createSyncroState({
 							key: start,
 							validator: this.validator.$schema.shape,
-							parent: this.yType
+							parent: this
 						})
 					);
 					start += i + 1;
@@ -324,7 +335,7 @@ export class SyncedArray<T extends any = any> {
 							forceNewType: true,
 							key: index,
 							validator: this.validator.$schema.shape,
-							parent: this.yType,
+							parent: this,
 							value: item
 						});
 					})
@@ -339,7 +350,7 @@ export class SyncedArray<T extends any = any> {
 						return createSyncroState({
 							key: this.yType.length,
 							validator: this.validator.$schema.shape,
-							parent: this.yType,
+							parent: this,
 							value: item
 						});
 					})
@@ -350,13 +361,12 @@ export class SyncedArray<T extends any = any> {
 			let result: any[] = [];
 			this.transact(() => {
 				const newSyncroStates = _items.map((item, index) => {
-					console.log(start + index, item);
 					this.yType.delete(start, deleteCount);
 					return createSyncroState({
 						key: start + index,
 						forceNewType: true,
 						validator: this.validator.$schema.shape,
-						parent: this.yType,
+						parent: this,
 						value: item
 					});
 				});

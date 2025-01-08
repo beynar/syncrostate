@@ -3,6 +3,10 @@ import type { DateValidator } from '../schemas/date.js';
 import { SvelteDate } from 'svelte/reactivity';
 import { NULL } from '../constants.js';
 import { BaseSyncedType } from './base.svelte.js';
+import type { SyncedArray } from './array.svelte.js';
+import type { SyncedObject } from './object.svelte.js';
+import { logError } from '../utils.js';
+// 🚨🚨🚨 design decision: date are defaulted to new Date() if not optionnal or nullable and the value does not exist in the document.
 
 const SvelteDateProxy = (onSet: () => void) => {
 	const date = new SvelteDate();
@@ -36,21 +40,32 @@ export class SyncedDate extends BaseSyncedType {
 	});
 
 	get value() {
-		return this.rawValue === NULL || !this.rawValue ? null : this.date;
+		const value = this.rawValue === NULL || !this.rawValue ? null : this.date;
+		if (!this.validator.$schema.nullable && value === null) {
+			return this.date;
+		}
+		if (!this.validator.$schema.optional && value === undefined) {
+			return this.date;
+		}
+		return value;
 	}
 
 	set value(value: Date | null | string | number) {
 		const isValid = this.validator.isValid(value);
 		if (!isValid) {
-			console.error('Invalid value', { value });
+			logError('Invalid value', { value });
 			return;
 		}
 		if (value !== null && value !== undefined) {
 			this.setYValue(new Date(value).toISOString());
 			this.date.setTime(new Date(value).getTime());
 		} else {
-			this.setYValue(null);
-			this.date.setTime(0);
+			if (value === undefined) {
+				this.deletePropertyFromParent();
+			} else {
+				this.setYValue(null);
+				this.date.setTime(0);
+			}
 		}
 	}
 
@@ -65,8 +80,13 @@ export class SyncedDate extends BaseSyncedType {
 		this.setValue(this.rawValue);
 	};
 
-	constructor(yType: Y.Text, validator: DateValidator) {
-		super(yType);
+	constructor(
+		yType: Y.Text,
+		validator: DateValidator,
+		parent: SyncedObject | SyncedArray,
+		key: string | number
+	) {
+		super(yType, key, parent);
 		this.validator = validator;
 		this.setValue(this.rawValue);
 	}

@@ -14,8 +14,7 @@ import type { DateValidator } from '../schemas/date.js';
 import type { BooleanValidator } from '../schemas/boolean.js';
 import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
-import { getTypeFromParent } from '../utils.js';
-import { getInitialStringifiedValue } from './base.svelte.js';
+import { getInitialStringifiedValue, getTypeFromParent } from '../utils.js';
 import { onMount, setContext } from 'svelte';
 import { CONTEXT_KEY } from '$lib/constants.js';
 import { SyncedArray } from './array.svelte.js';
@@ -74,6 +73,8 @@ export const syncroState = <T extends ObjectShape>({
 	safeSetContext(CONTEXT_KEY, syncroStateContext);
 
 	const syncroStateProxy = new SyncedObject({
+		parent: stateMap as any,
+		key: '$state',
 		validator: schemaValidator,
 		observe: false,
 		yType: stateMap,
@@ -126,49 +127,52 @@ export const syncroState = <T extends ObjectShape>({
 export const createSyncroState = ({
 	key,
 	validator,
-	parent,
 	forceNewType,
-	value
+	value,
+	parent
 }: {
-	parent: Y.Map<any> | Y.Array<any>;
 	key: string | number;
 	validator: Validator;
 	value?: any;
 	forceNewType?: boolean;
+	parent: SyncedObject | SyncedArray;
 }): SyncroStates => {
-	const initialValue = getInitialStringifiedValue(value, validator);
-	const type = getTypeFromParent({ forceNewType, parent, key, validator, value: initialValue });
+	const type = getTypeFromParent({ forceNewType, parent: parent.yType, key, validator, value });
 
 	switch (validator.$schema.kind) {
 		default:
 		case 'string': {
-			return new SyncedText(type as Y.Text, validator as StringValidator);
+			return new SyncedText(type as Y.Text, validator as StringValidator, parent, key);
 		}
 		case 'number': {
-			return new SyncedNumber(type as Y.Text, validator as NumberValidator);
+			return new SyncedNumber(type as Y.Text, validator as NumberValidator, parent, key);
 		}
 		case 'boolean': {
-			return new SyncedBoolean(type as Y.Text, validator as BooleanValidator);
+			return new SyncedBoolean(type as Y.Text, validator as BooleanValidator, parent, key);
 		}
 		case 'date': {
-			return new SyncedDate(type as Y.Text, validator as DateValidator);
+			return new SyncedDate(type as Y.Text, validator as DateValidator, parent, key);
 		}
 		case 'enum': {
-			return new SyncedEnum(type as Y.Text, validator as EnumValidator<any, any, any>);
+			return new SyncedEnum(type as Y.Text, validator as EnumValidator<any, any, any>, parent, key);
 		}
 		case 'object': {
 			return new SyncedObject({
 				yType: type as Y.Map<any>,
 				validator: validator as ObjectValidator<any>,
 				baseImplementation: {},
-				value
+				value,
+				parent: parent,
+				key
 			});
 		}
 		case 'array': {
 			return new SyncedArray({
 				yType: type as Y.Array<any>,
 				validator: validator as ArrayValidator<any>,
-				value
+				value,
+				parent: parent,
+				key
 			});
 		}
 	}

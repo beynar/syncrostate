@@ -43,11 +43,11 @@ During development, you can omit the connect function and the state will be crea
 
 ```svelte
 <script>
-	import { createSyncroState, y } from 'syncrostate';
+	import { syncroState, y } from 'syncrostate';
 	import { LiveblocksYjsProvider } from '@liveblocks/yjs';
 	import { createClient } from '@liveblocks/client';
 
-	const state = createSyncroState({
+	const state = syncroState({
 		connect: () => {
 			return new Promise((resolve, reject) => {
 				const client = createClient({

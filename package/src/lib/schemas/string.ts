@@ -51,7 +51,7 @@ export class StringValidator<
 		return false;
 	};
 
-	parse(value: string): { isValid: boolean; value: string | null } {
+	parse(value: string | null): { isValid: boolean; value: string | null } {
 		const coerced = this.coerce(value);
 		return {
 			isValid: this.isValid(coerced),
@@ -59,7 +59,7 @@ export class StringValidator<
 		};
 	}
 
-	coerce(value: string): string | null {
+	coerce(value: string | null): string | null {
 		if (value === NULL || value === null) {
 			if (this.$schema.nullable) {
 				return null;

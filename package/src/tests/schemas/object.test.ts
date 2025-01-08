@@ -153,7 +153,6 @@ describe('ObjectValidator', () => {
 				age: '30'
 			});
 			expect(isValid).toBe(false);
-			console.log({ isValid, value });
 			expect(value).toBe(null);
 		});
 

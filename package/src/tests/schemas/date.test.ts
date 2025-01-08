@@ -69,7 +69,6 @@ describe('DateValidator', () => {
 
 		it('should handle invalid inputs', () => {
 			expect(schema.parse('invalid-date')).toEqual({ isValid: false, value: null });
-			console.log(schema.parse(null));
 			expect(schema.parse(null)).toEqual({ isValid: false, value: null });
 		});
 	});

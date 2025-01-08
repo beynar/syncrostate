@@ -1,5 +1,8 @@
 import * as Y from 'yjs';
 import type { Validator } from './schemas/schema.js';
+import { NULL } from './constants.js';
+import type { BaseValidator } from './schemas/base.js';
+import { DEV } from 'esm-env';
 
 export const isMissingOptionnal = ({
 	parent,
@@ -14,6 +17,26 @@ export const isMissingOptionnal = ({
 	const isMissingOptionnal = validator.$schema.optional && !exists;
 	const hasDefault = validator.$schema.default !== undefined;
 	return isMissingOptionnal && !hasDefault;
+};
+
+export const getInitialStringifiedValue = (value: any, validator: Validator) => {
+	if (validator.$schema.kind === 'array' || validator.$schema.kind === 'object') {
+		return undefined;
+	}
+	const DEFAULT_VALUE = value === null ? null : (value ?? validator.$schema.default);
+
+	const isValid = validator.isValid(DEFAULT_VALUE);
+	if (!isValid) {
+		if (validator.$schema.nullable) {
+			return NULL;
+		}
+		return undefined;
+	}
+	if (DEFAULT_VALUE !== undefined) {
+		const stringifiedDefaultValue = (validator as BaseValidator<any>).stringify(DEFAULT_VALUE);
+
+		return stringifiedDefaultValue;
+	}
 };
 
 export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>({
@@ -32,9 +55,8 @@ export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>(
 	const isArray = parent instanceof Y.Array;
 	const instance = getInstance(validator) as new () => Y.Array<any> | Y.Map<any> | Y.Text;
 	const isText = instance === Y.Text;
-
-	const type = isText && value ? new Y.Text(value) : new instance();
-
+	const stringifiedValue = getInitialStringifiedValue(value, validator);
+	const type = isText ? new Y.Text(stringifiedValue) : new instance();
 	const typeInParent = (isArray ? parent.get(Number(key)) : parent.get(String(key))) as T;
 
 	const setAndReturnType = () => {
@@ -46,9 +68,11 @@ export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>(
 		}
 		return type as T;
 	};
+
 	if (!typeInParent || typeInParent._item?.deleted || forceNewType) {
 		return setAndReturnType() as T;
 	}
+
 	if (!(typeInParent instanceof instance)) {
 		return setAndReturnType() as T;
 	} else {
@@ -68,4 +92,10 @@ export const getInstance = (validator: Validator): (new () => Y.AbstractType<any
 		}
 	}
 	return null;
+};
+
+export const logError = (...args: any[]) => {
+	if (DEV) {
+		console.error(...args);
+	}
 };

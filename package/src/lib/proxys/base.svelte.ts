@@ -1,26 +1,9 @@
 import * as Y from 'yjs';
 import { NULL } from '../constants.js';
-import type { BaseValidator } from '$lib/schemas/base.js';
-import type { Validator } from '$lib/schemas/schema.js';
+import type { SyncedArray } from './array.svelte.js';
+import type { SyncedObject } from './object.svelte.js';
 
 type ObserverCallback = (e: Y.YEvent<Y.Text>, transact: Y.Transaction) => void;
-
-export const getInitialStringifiedValue = (value: any, validator: Validator) => {
-	if (validator.$schema.kind === 'array' || validator.$schema.kind === 'object') {
-		return undefined;
-	}
-	const DEFAULT_VALUE = value === null ? null : (value ?? validator.$schema.default);
-
-	const isValid = validator.isValid(DEFAULT_VALUE);
-	if (!isValid) {
-		return undefined;
-	}
-	if (DEFAULT_VALUE !== undefined) {
-		const stringifiedDefaultValue = (validator as BaseValidator<any>).stringify(DEFAULT_VALUE);
-
-		return stringifiedDefaultValue;
-	}
-};
 
 export class BaseSyncedType {
 	INTERNAL_ID: string;
@@ -28,12 +11,20 @@ export class BaseSyncedType {
 	rawValue = $state<string | null>('');
 	observeCallback?: ObserverCallback;
 
-	constructor(yType: Y.Text) {
+	constructor(
+		yType: Y.Text,
+		private key: string | number,
+		private parent: SyncedObject | SyncedArray
+	) {
 		this.INTERNAL_ID = crypto.randomUUID();
 		this.yType = yType;
 		this.rawValue = yType.toString();
 		this.yType.observe(this.observe);
 	}
+
+	deletePropertyFromParent = () => {
+		this.parent.deleteProperty({}, this.key);
+	};
 
 	observe = (e: Y.YEvent<Y.Text>, transact: Y.Transaction) => {
 		if (transact.origin !== this.INTERNAL_ID) {
@@ -56,8 +47,5 @@ export class BaseSyncedType {
 				);
 			}, this.INTERNAL_ID);
 		}
-	}
-	[Symbol.dispose]() {
-		this.destroy();
 	}
 }

@@ -18,9 +18,7 @@
 
 <KonvaImage
 	on:dragend={(e) => {
-		console.log('dragend', e.detail);
 		var stageAttrs = e.detail.currentTarget.parent?.parent?.attrs;
-		console.log({ stageAttrs }, e.detail.currentTarget.parent);
 
 		const { x, y } = e.detail.currentTarget.getAbsolutePosition();
 
