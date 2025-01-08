@@ -8,12 +8,12 @@ export type BaseSchema<T> = {
 export function isValidNullOrUndefined(this: { $schema: BaseSchema<any> }, value: any) {
 	const isOptionnal = this.$schema.optional;
 	const isNullable = this.$schema.nullable;
-	if (value === null && !isNullable) {
-		return false;
+	const isOkNullable = value === null && isNullable;
+	const isOkUndefined = value === undefined && isOptionnal;
+	if (isOkNullable || isOkUndefined) {
+		return true;
 	}
-	if (value === undefined && !isOptionnal) {
-		return false;
-	}
+
 	return true;
 }
 

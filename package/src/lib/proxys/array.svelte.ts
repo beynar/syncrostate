@@ -43,36 +43,43 @@ export class SyncedArray<T extends any = any> {
 		return true;
 	};
 
-	set value(value: any[]) {
-		if (!this.validator.isValid(value)) {
+	set value(input: any[]) {
+		const { isValid, value } = this.validator.parse(input);
+		if (!isValid) {
 			console.error('Invalid value', { value });
 			return;
 		}
 		this.transact(() => {
-			const remainingStates = this.syncroStates.slice(value.length);
-
-			remainingStates.forEach((state) => {
-				state.destroy();
-			});
-			if (remainingStates.length) {
-				this.yType.delete(value.length, remainingStates.length);
-			}
-
-			this.syncroStates = value.map((item, index) => {
-				const previsousState = this.syncroStates[index];
-				if (previsousState) {
-					previsousState.value = item;
-					return previsousState;
-				} else {
-					return createSyncroState({
-						key: index,
-						forceNewType: true,
-						validator: this.validator.$schema.shape,
-						parent: this.yType,
-						value: item
-					});
+			if (!value) {
+				// TODO: handle when value is null or undefined
+				// we should delete all states
+				// but i do not know how to mark this value as null or undefined
+				// in the yjs doc as it is not a YText;
+			} else {
+				const remainingStates = this.syncroStates.slice(value.length);
+				remainingStates.forEach((state) => {
+					state.destroy();
+				});
+				if (remainingStates.length) {
+					this.yType.delete(value.length, remainingStates.length);
 				}
-			});
+
+				this.syncroStates = value.map((item, index) => {
+					const previsousState = this.syncroStates[index];
+					if (previsousState) {
+						previsousState.value = item;
+						return previsousState;
+					} else {
+						return createSyncroState({
+							key: index,
+							forceNewType: true,
+							validator: this.validator.$schema.shape,
+							parent: this.yType,
+							value: item
+						});
+					}
+				});
+			}
 		});
 	}
 	get value() {

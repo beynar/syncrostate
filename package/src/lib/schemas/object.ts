@@ -26,14 +26,24 @@ export class ObjectValidator<
 	isValidNullOrUndefined = isValidNullOrUndefined.bind(this);
 
 	isValid = (value: any): value is SchemaOutput<T> => {
-		if (!this.isValidNullOrUndefined(value)) {
-			return false;
+		if (value === null) {
+			return this.$schema.nullable;
 		}
-		return Object.entries(value).every(([key, value]) => {
-			const validator = this.$schema.shape[key];
-			if (!validator) return false;
-			return validator.isValid(value);
-		});
+		if (value === undefined) {
+			return this.$schema.optional;
+		}
+
+		if (typeof value === 'object') {
+			// verify that each key of the shape is present in the value
+			// and that the value is valid for each key
+			// We can still pass extra keys but they will be ignored later on
+			// It's some sort of a "loose" validation
+			return Object.entries(this.$schema.shape).every(([key, validator]) => {
+				return validator.isValid(value[key]);
+			});
+		}
+
+		return false;
 	};
 
 	optional() {
@@ -46,22 +56,23 @@ export class ObjectValidator<
 		return this as ObjectValidator<T, O, true>;
 	}
 
-	validate(value: any): SchemaOutput<T> | null {
-		if (typeof value !== 'object' || value === null) return null;
-		let allValid = true;
-		const validValue = Object.entries(this.$schema.shape).reduce((acc, [key, validator]) => {
-			const parsedValue = validator.validate(value[key]);
-			const valid =
-				(validator.$schema.optional && value[key] === undefined) ||
-				(validator.$schema.nullable && value[key] === null);
-			allValid = allValid && valid;
-			Object.assign(acc, { [key]: valid ? parsedValue : undefined });
-			return acc;
-		}, {});
-		console.log({ validValue, allValid });
-		return allValid ? (validValue as SchemaOutput<T>) : null;
-	}
 	coerce(value: any): SchemaOutput<T> | null {
-		return this.validate(value);
+		const isObject = typeof value === 'object' && value !== null;
+		if (!isObject) {
+			return null;
+		}
+		return Object.entries(this.$schema.shape).reduce((acc, [key, validator]) => {
+			Object.assign(acc, { [key]: validator.coerce(value[key]) });
+			return acc;
+		}, {} as SchemaOutput<T>);
+	}
+
+	parse(value: any): { isValid: boolean; value: SchemaOutput<T> | null } {
+		const coerced = this.coerce(value);
+		const isValid = this.isValid(coerced);
+		return {
+			isValid,
+			value: isValid ? coerced : null
+		};
 	}
 }

@@ -13,11 +13,21 @@ export class NumberValidator<
 		super({ kind: 'number', optional: false, nullable: false });
 	}
 
+	private get defaultValue(): number | null {
+		return this.$schema.default || null;
+	}
+
 	isValid = (value: any) => {
-		if (!this.isValidNullOrUndefined(value)) {
-			return false;
+		if (typeof value === 'number' && !isNaN(value)) {
+			return true;
 		}
-		return typeof value === 'number' && !isNaN(Number(value));
+		if (value === NULL || value === null) {
+			return this.$schema.nullable;
+		}
+		if (value === undefined) {
+			return this.$schema.optional;
+		}
+		return false;
 	};
 
 	parse(value: string | null): { isValid: boolean; value: number | null } {
@@ -29,12 +39,33 @@ export class NumberValidator<
 	}
 
 	coerce(value: string | null): number | null {
-		if (value === NULL || value === null) return null;
+		if (value === NULL || value === null) {
+			if (this.$schema.nullable) {
+				return null;
+			} else {
+				return this.defaultValue;
+			}
+		}
+		if (value === undefined) {
+			return this.$schema.optional ? null : this.defaultValue;
+		}
+
 		const parsed = Number(value);
+		if (isNaN(parsed)) {
+			return this.$schema.nullable ? null : this.defaultValue;
+		}
+
 		return parsed;
 	}
 	stringify = (value: any) => {
-		if (value === null) return NULL;
-		return this.coerce(value) ? String(value) : '';
+		if (typeof value === 'number') {
+			return String(value);
+		} else {
+			if (this.$schema.nullable) {
+				return NULL;
+			} else {
+				return this.defaultValue?.toString() || NULL;
+			}
+		}
 	};
 }

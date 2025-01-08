@@ -35,32 +35,41 @@ export class SyncedObject {
 		this.yType.doc?.transact(fn, this.INTERNAL_ID);
 	};
 
-	set value(value: any) {
-		if (!this.validator.isValid(value)) {
+	set value(input: any) {
+		const { isValid, value } = this.validator.parse(input);
+		if (!isValid) {
 			console.error('Invalid value', { value });
 			return;
 		}
 		const shape = this.validator.$schema.shape;
 		this.transact(() => {
-			const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
-			remainingStates.forEach((key) => {
-				this.syncroStates[key].destroy();
-				delete this.syncroStates[key];
-			});
-			Object.entries(value).forEach(([key, value]) => {
-				if (key in shape) {
-					if (this.syncroStates[key]) {
-						this.syncroStates[key].value = value;
-					} else {
-						this.syncroStates[key] = createSyncroState({
-							key,
-							validator: shape[key],
-							parent: this.yType,
-							value
-						});
+			if (!value) {
+				// TODO: handle when value is null or undefined
+				// we should delete all states
+				// but i do not know how to mark this value as null or undefined
+				// in the yjs doc as it is not a YText;
+			} else {
+				const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
+				remainingStates.forEach((key) => {
+					this.syncroStates[key].destroy();
+					delete this.syncroStates[key];
+					this.yType.delete(key);
+				});
+				Object.entries(value).forEach(([key, value]) => {
+					if (key in shape) {
+						if (this.syncroStates[key]) {
+							this.syncroStates[key].value = value;
+						} else {
+							this.syncroStates[key] = createSyncroState({
+								key,
+								validator: shape[key],
+								parent: this.yType,
+								value
+							});
+						}
 					}
-				}
-			});
+				});
+			}
 		});
 	}
 

@@ -26,12 +26,24 @@ export class ArrayValidator<
 	}
 	isValidNullOrUndefined = isValidNullOrUndefined.bind(this);
 
+	private get defaultValue() {
+		return this.$schema.default || null;
+	}
+
 	isValid = (value: any): value is ArrayType<T>[] => {
-		if (!Array.isArray(value)) return false;
-		if (!this.isValidNullOrUndefined(value)) {
-			return false;
+		if (Array.isArray(value)) {
+			return value.every((item) => this.$schema.shape.isValid(item));
 		}
-		return value.every((item) => this.$schema.shape.isValid(item));
+
+		if (value === null) {
+			return this.$schema.nullable;
+		}
+
+		if (value === undefined) {
+			return this.$schema.optional;
+		}
+
+		return false;
 	};
 
 	optional() {
@@ -44,18 +56,23 @@ export class ArrayValidator<
 		return this as ArrayValidator<T, O, true>;
 	}
 
-	validate(value: any): T[] | null {
-		if (typeof value !== 'object' || value === null) return null;
-		if (!Array.isArray(value)) return null;
-		const isNullable = this.$schema.nullable;
-		const allValid = value.every(
-			(item) => this.$schema.shape.validate(item) !== null || (isNullable && item === null)
-		);
-		return allValid ? (value as T[]) : null;
+	coerce(value: any): ArrayType<T>[] | null {
+		const isArray = Array.isArray(value);
+		const validItems = isArray ? value.filter((item) => this.$schema.shape.isValid(item)) : [];
+		const someValid = validItems.length > 0;
+
+		if (isArray && someValid) {
+			return validItems.map((item) => this.$schema.shape.coerce(item));
+		}
+		return this.defaultValue;
 	}
 
-	coerce(value: any): T[] | null {
-		return this.validate(value);
+	parse(value: any): { isValid: boolean; value: ArrayType<T>[] | null } {
+		const coerced = this.coerce(value);
+		return {
+			isValid: this.isValid(coerced),
+			value: coerced
+		};
 	}
 
 	default(value: ArrayType<T>[]) {

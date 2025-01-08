@@ -15,11 +15,20 @@ export class EnumValidator<
 		super({ kind: 'enum', optional: false, nullable: false, values: new Set(values) });
 	}
 
+	private get defaultValue(): T | null {
+		return this.$schema.default || null;
+	}
 	isValid = (value: any) => {
-		if (!this.isValidNullOrUndefined(value)) {
-			return false;
+		if (this.$schema.values.has(value as any)) {
+			return true;
 		}
-		return this.$schema.values.has(value);
+		if (value === NULL || value === null) {
+			return this.$schema.nullable;
+		}
+		if (value === undefined) {
+			return this.$schema.optional;
+		}
+		return false;
 	};
 
 	parse(value: string | null): { isValid: boolean; value: T | null } {
@@ -31,9 +40,18 @@ export class EnumValidator<
 	}
 
 	coerce(value: string | null): T | null {
-		if (value === NULL || value === null) return null;
+		if (value === NULL || value === null) {
+			if (this.$schema.nullable) {
+				return null;
+			} else {
+				return this.defaultValue;
+			}
+		}
+		if (value === undefined) {
+			return this.$schema.optional ? null : this.defaultValue;
+		}
 		if (this.$schema.values.has(value as any)) return value as T;
-		return null;
+		return this.$schema.nullable ? null : this.defaultValue;
 	}
 	stringify = (value: any) => {
 		if (value === null) return NULL;

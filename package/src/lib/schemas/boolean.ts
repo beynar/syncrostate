@@ -13,12 +13,22 @@ export class BooleanValidator<
 		super({ kind: 'boolean', optional: false, nullable: false });
 	}
 
+	private get defaultValue(): boolean | null {
+		return this.$schema.default || null;
+	}
+
 	isValid = (value: any) => {
-		if (!this.isValidNullOrUndefined(value)) {
-			return false;
+		if (typeof value === 'boolean') {
+			return true;
 		}
-		if (typeof value !== 'boolean') return false;
-		return true;
+		if (value === null) {
+			return this.$schema.nullable;
+		}
+		if (value === undefined) {
+			return this.$schema.optional;
+		}
+
+		return false;
 	};
 
 	parse(value: string | null): { isValid: boolean; value: boolean | null } {
@@ -30,16 +40,28 @@ export class BooleanValidator<
 	}
 
 	coerce(value: string | null): boolean | null {
+		if (value === NULL || value === null) {
+			if (this.$schema.nullable) {
+				return null;
+			} else {
+				return this.defaultValue;
+			}
+		}
 		if (value === 'true') return true;
 		if (value === 'false') return false;
-		if (value === NULL || value === null) return null;
-		if (Number(value) === 1) return true;
-		if (Number(value) === 0) return false;
-		return null;
+
+		return this.$schema.nullable ? null : this.defaultValue;
 	}
+
 	stringify = (value: any) => {
-		if (value === null) return NULL;
-		const coercedValue = this.coerce(value);
-		return coercedValue ? String(coercedValue) : '';
+		if (typeof value === 'boolean') {
+			return value ? 'true' : 'false';
+		} else {
+			if (this.$schema.nullable) {
+				return NULL;
+			} else {
+				return this.defaultValue === null ? NULL : this.defaultValue ? 'true' : 'false';
+			}
+		}
 	};
 }
