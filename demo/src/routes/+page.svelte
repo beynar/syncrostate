@@ -62,24 +62,25 @@
 		</section>
 
 		<section id="about" class="border-t border-white/10 py-24">
-			<div class="container mx-auto max-w-2xl px-6">
+			<div class="container mx-auto max-w-2xl px-6 text-center">
 				<h2 class="mb-6 text-center text-2xl font-bold">About syncroState</h2>
 				<p class="mb-4 text-white/70">
-					syncroState is an open-source library that brings the power of real-time collaboration to
-					Svelte applications. By leveraging Yjs, it enables seamless state synchronization across
-					multiple users, making it ideal for building collaborative tools, real-time editors, and
-					multiplayer experiences.
+					SyncroState is my contribution to the Svelte Hackathon. Hope you enjoy it!
 				</p>
-				<p class="text-white/70">
-					With its simple API and deep integration with Svelte's reactivity system, syncroState
-					makes it easy to add real-time capabilities to your projects without compromising on
-					performance or developer experience.
+				<p class="mb-4 text-white/70">
+					Documentation is available on the <a
+						href="https://github.com/beynar/syncrostate"
+						target="_blank"
+						class="text-blue-500 hover:underline"
+						rel="noopener noreferrer">GitHub repository</a
+					>.
 				</p>
 				<h2 class="mb-6 mt-10 text-center text-2xl font-bold">Crédits</h2>
 				<p class="mb-4 text-white/70">
-					SyncroState is builds directly on Yjs ❤️. It's also inspired by and builds upon the
-					amazing work of SyncedStore. It also builds on top of the amazing Svelte reactivity
-					system.
+					SyncroState is built upon Yjs ❤️, the powerful CRDT library that makes real-time
+					collaboration possible. We gratefully acknowledge SyncedStore for pioneering collaborative
+					state management concepts, and the Svelte team for their exceptional framework and new
+					reactivity system that serves as our foundation.
 				</p>
 			</div>
 		</section>

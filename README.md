@@ -1,8 +1,8 @@
 # SyncroState
 
-SyncroState brings Svelte 5 reactivity to the multiplayer level. Built on top of Yjs, it provides a reactive and type-safe way to build multiplayer offline experiences.
+SyncroState brings Svelte 5 reactivity to the multiplayer level. Built on top of Yjs, it provides a reactive and type-safe way to build multiplayer experiences.
 
-Inspired by [Syncedstore](https://github.com/yousefed/SyncedStore), SyncroState modernizes the approach with Svelte 5's powerful reactivity system to create a more flexible and intuitive developer experience.
+Inspired by [Syncedstore](https://github.com/yousefed/SyncedStore), SyncroState modernizes collaborative state management by leveraging new Svelte 5's reactivity system. It provides a natural way to work with synchronized state that feels just like a regular Svelte $state.
 
 > **Note to Svelte Hackathon Organizers**
 >
@@ -47,7 +47,7 @@ The schema defines both the structure and the types of your state. Every field i
 - Synchronized across clients
 - Validated against the schema
 
-Once created, you can use the state like a regular Svelte state: mutate it, bind it, use mutative array methods, etc.
+Once created, you can use the state like a regular Svelte state: mutate it, bind it, use mutative methods, etc.
 
 ```svelte
 <script>
@@ -70,13 +70,14 @@ Once created, you can use the state like a regular Svelte state: mutate it, bind
 			});
 		},
 
-		// Define your state schema
+		// Define your state schema. It must be an object
 		schema: {
 			// Primitive values
 			name: y.string(),
 			age: y.number(),
 			isOnline: y.boolean(),
 			lastSeen: y.date(),
+			theme: y.enum(['light', 'dark']),
 
 			// Nested objects
 			preferences: y.object({

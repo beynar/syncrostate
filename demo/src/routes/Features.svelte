@@ -73,7 +73,17 @@
 order-t border-white/10 pb-24 pt-12"
 >
 	<div class="container mx-auto px-6">
-		<h2 class="mb-12 mt-0 text-center text-2xl font-bold">Features</h2>
+		<h2 class="mt-0 text-center text-2xl font-bold">Features</h2>
+		<div class="mx-auto mb-12 px-6 py-4 text-center">
+			Built on top of Yjs, syncroState provides a reactive and type-safe way to build multiplayer
+			experiences. Inspired by <a
+				href="https://github.com/yousefed/SyncedStore"
+				target="_blank"
+				rel="noopener noreferrer">Syncedstore</a
+			>, SyncroState modernizes collaborative state management by leveraging new Svelte 5's
+			reactivity system. It provides a natural way to work with synchronized state that feels just
+			like a regular Svelte $state.
+		</div>
 		<div class="grid grid-cols-1 gap-12 md:grid-cols-3">
 			{#each features as feature}
 				<div class="border border-white/10 p-6">
