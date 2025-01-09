@@ -98,9 +98,9 @@ SyncroState combines the power of Svelte's reactivity system with Yjs's CRDT cap
 
 ### Local State Management
 
-1. **Proxy-based State Tree**: When you create a state using `syncroState()`, it builds a tree of proxy objects that mirror your schema structure. Each property (primitive or nested) is wrapped in a specialized proxy that leverages Svelte's `$state` for reactivity.
+1. **Proxy-based State Tree**: When you create a state using `syncroState()`, it builds a tree of proxy objects that mirror your schema structure. Each property (primitive or nested) is wrapped in a specialized proxy that leverages Svelte's reactivity through `$state` or specialized proxy like `SvelteDate` and soon `SvelteSet` and `SvelteMap`.
 
-2. **Mutation Trapping**: These proxies intercept all state mutations (assignments, array operations, object modifications) using JavaScript's Proxy API. This allows SyncroState to:
+2. **Mutation Trapping**: These proxies intercept all state mutations (assignments, mutative operations, object modifications, reassignments). This allows SyncroState to:
    - Validate changes against the schema
    - Update the local Svelte state immediately for responsive UI updates
    - Forward changes to the underlying Yjs document
@@ -117,7 +117,7 @@ SyncroState combines the power of Svelte's reactivity system with Yjs's CRDT cap
 
    - The change is wrapped in a Yjs transaction
    - For primitives, the value is serialized and stored in the Y.Text
-   - For collections, the corresponding Y.Array or Y.Map is updated
+   - For collections, the corresponding Y.Array or Y.Map is updated.
    - Yjs handles conflict resolution and ensures eventual consistency
 
 2. **Remote Updates**: When changes come in from other clients:
@@ -203,3 +203,7 @@ SyncroState uses Yjs's undo/redo system to provide undo/redo functionality. Thes
 - [ ] Find a way to make syncrostate schema optional
 - [ ] Add support for recursive types
 - [ ] Add support for nested documents
+
+## License
+
+SyncroState is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.

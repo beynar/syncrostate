@@ -93,6 +93,74 @@ describe('DateProxy', () => {
 			});
 		});
 
+		describe('Date operations', () => {
+			beforeEach(() => {
+				state.date = new Date('2024-03-15T12:00:00.000Z');
+			});
+
+			it('should handle setFullYear operation', () => {
+				state.date.setFullYear(2025);
+				expect(state.date.getFullYear()).toBe(2025);
+			});
+
+			it('should handle setMonth operation', () => {
+				state.date.setMonth(5); // June (0-based)
+				expect(state.date.getMonth()).toBe(5);
+			});
+
+			it('should handle setDate operation', () => {
+				state.date.setDate(20);
+				expect(state.date.getDate()).toBe(20);
+			});
+
+			it('should handle setHours operation', () => {
+				state.date.setHours(15);
+				expect(state.date.getHours()).toBe(15);
+			});
+
+			it('should handle setMinutes operation', () => {
+				state.date.setMinutes(30);
+				expect(state.date.getMinutes()).toBe(30);
+			});
+
+			it('should handle setSeconds operation', () => {
+				state.date.setSeconds(45);
+				expect(state.date.getSeconds()).toBe(45);
+			});
+
+			it('should handle setMilliseconds operation', () => {
+				state.date.setMilliseconds(500);
+				expect(state.date.getMilliseconds()).toBe(500);
+			});
+
+			it('should handle multiple operations in sequence', () => {
+				state.date.setFullYear(2025);
+				state.date.setMonth(6);
+				state.date.setDate(25);
+				state.date.setUTCHours(14);
+				state.date.setUTCMinutes(30);
+				state.date.setUTCSeconds(15);
+				state.date.setUTCMilliseconds(250);
+
+				expect(state.date.toISOString()).toBe('2025-07-25T14:30:15.250Z');
+			});
+
+			it('should handle setTime operation', () => {
+				const timestamp = new Date('2025-12-25T00:00:00.000Z').getTime();
+				state.date.setTime(timestamp);
+				expect(state.date.toISOString()).toBe('2025-12-25T00:00:00.000Z');
+			});
+
+			it('should handle UTC operations', () => {
+				state.date.setUTCFullYear(2025);
+				state.date.setUTCMonth(11); // December (0-based)
+				state.date.setUTCDate(25);
+
+				expect(state.date.getUTCFullYear()).toBe(2025);
+				expect(state.date.getUTCMonth()).toBe(11);
+				expect(state.date.getUTCDate()).toBe(25);
+			});
+		});
 		describe('Nullable Date', () => {
 			beforeEach(() => {
 				state.nullableDate = testDate;
