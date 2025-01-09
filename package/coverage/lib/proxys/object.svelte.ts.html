@@ -30,16 +30,16 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">25% </span>
+                <span class="strong">75% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/4</span>
+                <span class='fraction'>6/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">0% </span>
+                <span class="strong">50% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/1</span>
+                <span class='fraction'>1/2</span>
             </div>
         
             
@@ -357,7 +357,10 @@
 <a name='L292'></a><a href='#L292'>292</a>
 <a name='L293'></a><a href='#L293'>293</a>
 <a name='L294'></a><a href='#L294'>294</a>
-<a name='L295'></a><a href='#L295'>295</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L295'></a><a href='#L295'>295</a>
+<a name='L296'></a><a href='#L296'>296</a>
+<a name='L297'></a><a href='#L297'>297</a>
+<a name='L298'></a><a href='#L298'>298</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -499,14 +502,12 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -516,6 +517,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -528,6 +533,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -658,7 +664,7 @@ import { isInitialized, isMissingOptionnal } from '../utils.js';
 import { type State, type SyncroStates, createSyncroState } from './syncroState.svelte.js';
 import { SyncedArray } from './array.svelte.js';
 import { logError } from '../utils.js';
-import { NULL_OBJECT } from '$lib/constants.js';
+import { NULL_OBJECT, STATE_SYMBOL } from '$lib/constants.js';
 &nbsp;
 const createYTypesObjectProxy = (yType: Y.Map&lt;any&gt;) =&gt; {
 	return new Proxy(
@@ -792,17 +798,19 @@ export class SyncedObject {
 &nbsp;
 		const shape = this.validator.$schema.shape;
 &nbsp;
-		const objectState = {
-			...state,
-			yType,
-			yTypes: createYTypesObjectProxy(yType)
-		};
 		this.proxy = new Proxy(
 			{},
 			{
 				get: (target: any, key: any) =&gt; {
-					if (key === '$state') {
-						return objectState;
+					if (key === 'getState') {
+						return () =&gt; <span class="fstat-no" title="function not covered" >state;</span>
+					}
+					if (key === 'getType') {
+						return () =&gt; yType;
+					}
+&nbsp;
+					if (key === 'getTypes') {
+						return () =&gt; createYTypesObjectProxy(yType);
 					}
 &nbsp;
 					if (key === 'toJSON') {
@@ -823,6 +831,7 @@ export class SyncedObject {
 					if (value === undefined) {
 						return this.deleteProperty(target, key);
 					}
+&nbsp;
 					const syncroState = this.syncroStates[key];
 					if (!syncroState) {
 						this.state.transaction(() =&gt; {
@@ -850,7 +859,7 @@ export class SyncedObject {
 				},
 &nbsp;
 				getOwnPropertyDescriptor(target: any, key: any) {
-					if ((typeof key === 'string' &amp;&amp; yType.has(key)) || key === 'toJSON') {
+					if ((typeof key === 'string' &amp;&amp; yType.has(key<span class="branch-0 cbranch-no" title="branch not covered" >)) || key === 'toJSON') {</span>
 						return {
 							enumerable: true,
 							configurable: true
@@ -860,7 +869,7 @@ export class SyncedObject {
 					return undefined;
 				},
 &nbsp;
-<span class="fstat-no" title="function not covered" >				ownKeys: () =&gt; Array.from(this.yType.keys())</span>
+				ownKeys: () =&gt; Array.from(this.yType.keys())
 			}
 		);
 		if (observe) {
@@ -914,7 +923,7 @@ export class SyncedObject {
 			}
 			const hasDefaultValue = this.validator.$schema.default;
 			if (!hasDefaultValue) {
-				if (this.validator.$schema.<span class="branch-0 cbranch-no" title="branch not covered" >nullable &amp;&amp; !value) {</span>
+				if (this.validator.$schema.nullable &amp;&amp; !value) {
 					this.setNull();
 					return;
 				}
@@ -929,7 +938,7 @@ export class SyncedObject {
 						key,
 						validator: validator,
 						parent: this,
-						value: value?.[key] || this.validator.$schema.<span class="branch-0 cbranch-no" title="branch not covered" >default?.[key],</span>
+						value: value?.[key] || this.validator.$schema.default?.[key],
 						state: this.state
 					});
 				}
@@ -952,7 +961,7 @@ export class SyncedObject {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-01-09T11:56:16.410Z
+                at 2025-01-09T16:41:47.071Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

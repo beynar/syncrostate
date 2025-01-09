@@ -3,11 +3,11 @@ import type { ArrayValidator } from '../schemas/array.js';
 import { createSyncroState, type State, type SyncroStates } from './syncroState.svelte.js';
 import type { SyncedObject } from './object.svelte.js';
 import { isInitialized, logError, propertyToNumber } from '../utils.js';
-import { NULL_ARRAY } from '$lib/constants.js';
+import { NULL_ARRAY, STATE_SYMBOL } from '$lib/constants.js';
 
 const createYTypesArrayProxy = (yType: Y.Array<any>) => {
 	return new Proxy([], {
-		get: (target, key) => {
+		get: (_target, key) => {
 			const index = propertyToNumber(key);
 			if (typeof index === 'number' && index >= 0 && index < yType.length) {
 				return yType.get(index);
@@ -27,6 +27,7 @@ export class SyncedArray<T extends any = any> {
 	proxy: any;
 	initialized: boolean = false;
 	isNull: boolean = $state(false);
+	// array: any[] = $state(this.syncroStates.map((state) => state.value));
 
 	//🚨 Using a derived would be preferable but it breaks the tests :/
 	// private array = $derived(this.syncroStates.map((state) => state.value));
@@ -135,16 +136,16 @@ export class SyncedArray<T extends any = any> {
 		yType.observe(this.observe);
 		const shape = this.validator.$schema.shape;
 
-		const arrayState = {
-			...state,
-			yType,
-			yTypes: createYTypesArrayProxy(yType)
-		};
-
 		this.proxy = new Proxy([], {
 			get: (target: any, pArg: any, receiver: any) => {
-				if (pArg === '$state') {
-					return arrayState;
+				if (pArg === 'getState') {
+					return () => state;
+				}
+				if (pArg === 'getType') {
+					return () => this.yType;
+				}
+				if (pArg === 'getTypes') {
+					return () => createYTypesArrayProxy(this.yType);
 				}
 				const p = propertyToNumber(pArg);
 				if (Number.isInteger(p)) {
@@ -266,10 +267,12 @@ export class SyncedArray<T extends any = any> {
 				this.yType.get(0) instanceof Y.Text &&
 				this.yType.get(0).toString() === NULL_ARRAY
 			) {
+				// If the array is null, set the isNull state to true and return early
 				this.isNull = true;
 				return;
 			}
-			if (value) {
+
+			if (this.state.initialized || value) {
 				for (let i = 0; i < Math.max(value?.length || 0, this.yType.length); i++) {
 					this.syncroStates[i] = createSyncroState({
 						key: i,

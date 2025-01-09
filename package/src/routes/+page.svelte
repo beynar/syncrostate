@@ -1,42 +1,60 @@
 <script lang="ts">
 	import { syncroState } from '$lib/proxys/syncroState.svelte.js';
 	import { y } from '$lib/schemas/schema.js';
-	const synced = syncroState({
-		// connect: async ({ doc }) => {
-		// 	return new Promise((resolve, reject) => {
-		// 		const client = createClient({
-		// 			publicApiKey: 'pk_prod_TXiiCUekyBO_3gntGdLDEyqmJ0Qc6AqyfAoz0Pntk5JlzC4sSWFmjh4cP73rWXpm'
-		// 		});
-		// 		const { room } = client.enterRoom('your-room-id-5');
-		// 		const yProvider = new LiveblocksYjsProvider(room, doc);
-		// 		yProvider.on('synced', () => {
-		// 			resolve();
-		// 		});
-		// 	});
-		// },
+	import hljs from 'highlight.js';
+	import 'highlight.js/styles/github-dark.css';
+	import javascript from 'highlight.js/lib/languages/json';
+	import { getSyncroState } from '$lib/index.js';
+	import { LiveblocksYjsProvider } from '@liveblocks/yjs';
+	import { createClient } from '@liveblocks/client';
+	import { onMount } from 'svelte';
+	hljs.registerLanguage('javascript', javascript);
+
+	const highlight = (node: HTMLElement, json: string) => {
+		const highlighted = hljs.highlight(json, { language: 'json' }).value;
+		node.innerHTML = highlighted;
+	};
+
+	const client = createClient({
+		publicApiKey: 'pk_prod_ytItHgLSil9pFkJELGPI7yWptk_jNMifKfv3JhWODRGX2vK3hrt-3oNzDkrc1kcx'
+	});
+	const { room } = client.enterRoom('your-room-id-10');
+
+	onMount(() => {
+		return () => {
+			client.logout();
+			room.disconnect();
+		};
+	});
+	const document = syncroState({
+		connect: async ({ doc }) => {
+			return new Promise((resolve, reject) => {
+				const yProvider = new LiveblocksYjsProvider(room, doc);
+				yProvider.on('synced', () => {
+					resolve();
+				});
+			});
+		},
 		schema: {
-			name: y.string().default('John').optional(),
-			gender: y.enum('male', 'female').default('female').nullable(),
-			firstName: y.string().default('Doe'),
-			birthday: y.date().default(new Date()).nullable(),
-			age: y.number().nullable().default(30),
-			friends: y.array(y.string().optional()).default(['Test']),
+			name: y.string().default('Bob').optional(),
+			firstName: y.string().default('Smith'),
+			birthday: y.date().default(new Date('2000-01-01')).nullable(),
+			age: y.number().nullable().default(25),
+			friends: y.array(y.string().optional()).default(['Alice', 'Charlie']),
 			family: y.array(y.object({ name: y.string() })),
-			nodes: y.array(
+			todos: y.array(
 				y.object({
-					type: y.enum('rect', 'circle'),
-					x: y.number(),
-					y: y.number(),
-					width: y.number(),
-					height: y.number(),
-					fill: y.string()
+					title: y.string(),
+					done: y.boolean(),
+					priority: y.enum('low', 'medium', 'high')
 				})
 			),
-			father: y
+			profile: y
 				.object({
-					name: y.string().default('Alfred'),
-					wife: y.object({
-						name: y.string()
+					bio: y.string().default('Hello world'),
+					settings: y.object({
+						theme: y.enum('light', 'dark').default('light'),
+						notifications: y.boolean().default(true)
 					})
 				})
 				.optional()
@@ -44,118 +62,138 @@
 	});
 
 	let friends = $state(['John']);
+
+	const updateName = () => {
+		document.name = 'Alice' + Math.floor(Math.random() * 100);
+	};
+
+	function updateAge() {
+		document.age = Math.floor(Math.random() * 100);
+	}
+
+	function addFriend() {
+		document.friends.push(`Friend${Math.floor(Math.random() * 100)}`);
+	}
+
+	function toggleTheme() {
+		if (document.profile?.settings.theme === 'light') {
+			document.profile.settings.theme = 'dark';
+		} else {
+			if (document.profile) {
+				document.profile.settings.theme = 'light';
+			}
+		}
+	}
+
+	function addTodo() {
+		document.todos.push({
+			title: `Task ${Math.floor(Math.random() * 100)}`,
+			done: false,
+			priority: 'medium'
+		});
+	}
+
+	function addFamilyMember() {
+		document.family.push({
+			name: `Family${Math.floor(Math.random() * 100)}`
+		});
+	}
+
+	function updateFirstName() {
+		document.firstName = 'John' + Math.floor(Math.random() * 100);
+	}
+
+	function updateBirthday() {
+		const randomDate = new Date(Math.floor(Math.random() * Date.now()));
+		document.birthday = randomDate;
+	}
+
+	function removeFriend() {
+		if (document.friends.length > 0) {
+			document.friends.pop();
+		}
+	}
+
+	function toggleTodo() {
+		if (document.todos.length > 0) {
+			const lastTodo = document.todos[document.todos.length - 1];
+			lastTodo.done = !lastTodo.done;
+		}
+	}
+
+	function updateBio() {
+		if (!document.profile) {
+			document.profile = {
+				bio: 'New bio',
+				settings: { theme: 'light', notifications: true }
+			};
+		}
+
+		if (document.profile) {
+			document.profile.bio = `Bio update ${Math.floor(Math.random() * 100)}`;
+		}
+	}
+
+	function toggleNotifications() {
+		if (document.profile) {
+			document.profile.settings.notifications = !document.profile.settings.notifications;
+		}
+	}
+
+	const logNestedState = () => {
+		const state = getSyncroState(document.family);
+	};
+
+	const json = $derived(JSON.stringify(document, null, 2));
 </script>
 
-{#if synced.$state.remotlySynced}
-	<div class="prose prose-sm">
-		<code>
-			{JSON.stringify(synced, null, 2)}
-		</code>
-	</div>
+{#if document.getState().remotlySynced}
+	<div class="grid grid-cols-2 gap-2 p-10">
+		<div class="flex flex-col gap-4">
+			<div class="flex flex-col gap-2">
+				<h3 class="text-lg font-bold">Basic Properties</h3>
+				<div class="grid grid-cols-2 gap-2">
+					<button class="btn btn-primary" onclick={updateName}>{document.name}</button>
+					<button class="btn btn-primary" onclick={updateFirstName}>Update First Name</button>
+					<button class="btn btn-secondary" onclick={updateAge}>Update Age</button>
+					<button class="btn btn-secondary" onclick={updateBirthday}>Update Birthday</button>
+				</div>
+			</div>
 
-	<div class="prose prose-sm">
-		<code>
-			{JSON.stringify(friends, null, 2)}
-		</code>
-	</div>
+			<div class="flex flex-col gap-2">
+				<h3 class="text-lg font-bold">Arrays</h3>
+				<div class="grid grid-cols-2 gap-2">
+					<button class="btn btn-accent" onclick={addFriend}>Add Friend</button>
+					<button class="btn btn-error" onclick={removeFriend}>Remove Friend</button>
+					<button class="btn btn-info" onclick={addFamilyMember}>Add Family</button>
+					<button class="btn btn-success" onclick={addTodo}>Add Todo</button>
+					<button class="btn btn-warning" onclick={toggleTodo}>Toggle Last Todo</button>
+				</div>
+			</div>
 
-	<div class="grid gap-2">
-		<button
-			onclick={() => {
-				synced.nodes.push({
-					type: 'rect',
-					x: 100,
-					y: 100,
-					width: 100,
-					height: 100,
-					fill: 'string'
-				});
-			}}>Push node</button
-		>
-		<button
-			onclick={() => {
-				synced.name = synced.name === 'John' ? 'Jane' : 'John';
-			}}>name: {synced.name}</button
-		>
-		<button
-			onclick={() => {
-				synced.family.push({ name: 'John' });
-				// synced.family = [];
-				// if (synced.family[0]) {
-				// 	console.log('synced.family[0]', synced.family[0]);
-				synced.family[0] = { name: synced.family[0].name === 'John' ? 'Jane' : 'John' };
-				// } else {
-				// 	console.log('synced.family.push', synced.family[0]);
-				// 	synced.family.push({ name: 'John' });
-				// }
-			}}>family name: {synced.family?.[0]?.name}</button
-		>
-		<button
-			onclick={() => {
-				synced.friends[0] === 'John' ? (synced.friends[0] = 'Jack') : (synced.friends[0] = 'John');
-				friends[0] === 'John' ? (friends[0] = 'Jack') : (friends[0] = 'John');
-			}}
-		>
-			set friends[0] {synced.friends[0]}
-		</button>
-		<button
-			onclick={() => {
-				synced.friends = ['John'];
-				friends = ['John'];
-			}}
-		>
-			reset friends
-		</button>
-		<button
-			onclick={() => {
-				const value = synced.friends[1] === 'HELLO' ? 'WORLD' : 'HELLO';
-				synced.friends.splice(1, 1, value);
-				friends.splice(1, 1, value);
-			}}
-		>
-			splice friends
-		</button>
-		<button
-			onclick={() => {
-				synced.friends.push('Jack', 'John');
-				friends.push('Jack', 'John');
-			}}
-		>
-			push friends
-		</button>
-		<button
-			onclick={() => {
-				synced.friends.pop();
-				friends.pop();
-			}}
-		>
-			pop friends
-		</button>
-
-		<button
-			onclick={() => {
-				synced.friends.unshift('Unshift-1', 'Unshift-2');
-				friends.unshift('Unshift-1', 'Unshift-2');
-			}}
-		>
-			unshift friends
-		</button>
-
-		<button
-			onclick={() => {
-				synced.friends[0] = undefined;
-				friends[0] = undefined;
-			}}
-		>
-			delete friends
-		</button>
-		<button
-			onclick={() => {
-				synced.friends = ['John', 'Jane'];
-				friends = ['John', 'Jane'];
-			}}
-		>
-			set friends
-		</button>
+			<div class="flex flex-col gap-2">
+				<h3 class="text-lg font-bold">Nested Objects</h3>
+				<div class="grid grid-cols-2 gap-2">
+					<button class="btn btn-warning" onclick={toggleTheme}>Toggle Theme</button>
+					<button class="btn btn-info" onclick={updateBio}>Update Bio</button>
+					<button class="btn btn-accent" onclick={toggleNotifications}>Toggle Notifications</button>
+				</div>
+			</div>
+			<div class="flex flex-col gap-2">
+				<h3 class="text-lg font-bold">Utils</h3>
+				<div class="grid grid-cols-2 gap-2">
+					<button class="btn btn-warning" onclick={logNestedState}>Log nested $state</button>
+				</div>
+			</div>
+		</div>
+		<div class="">
+			<div class="mockup-code p-2">
+				<code>
+					{#key json}
+						<pre use:highlight={json}>es</pre>
+					{/key}
+				</code>
+			</div>
+		</div>
 	</div>
 {/if}

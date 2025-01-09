@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>121/121</span>
+                <span class='fraction'>125/125</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>121/121</span>
+                <span class='fraction'>125/125</span>
             </div>
         
             
@@ -292,7 +292,12 @@
 <a name='L227'></a><a href='#L227'>227</a>
 <a name='L228'></a><a href='#L228'>228</a>
 <a name='L229'></a><a href='#L229'>229</a>
-<a name='L230'></a><a href='#L230'>230</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L230'></a><a href='#L230'>230</a>
+<a name='L231'></a><a href='#L231'>231</a>
+<a name='L232'></a><a href='#L232'>232</a>
+<a name='L233'></a><a href='#L233'>233</a>
+<a name='L234'></a><a href='#L234'>234</a>
+<a name='L235'></a><a href='#L235'>235</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -346,8 +351,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -376,8 +379,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
@@ -406,18 +407,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -425,6 +414,27 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -561,7 +571,7 @@ const safeSetContext = (key: string, value: any) =&gt; {
 	}
 };
 &nbsp;
-export type State&lt;T extends 'object' | 'array' = 'object'&gt; = {
+export type State = {
 	remotlySynced: boolean;
 	locallySynced: boolean;
 	connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
@@ -571,8 +581,6 @@ export type State&lt;T extends 'object' | 'array' = 'object'&gt; = {
 	initialized: boolean;
 	transaction: (fn: () =&gt; void) =&gt; void;
 	transactionKey: any;
-	sharedType: Y.Map&lt;any&gt;;
-	sharedTypes: T extends 'object' ? Record&lt;string, Y.AbstractType&lt;any&gt;&gt; : Y.AbstractType&lt;any&gt;[];
 	undo: () =&gt; void;
 	redo: () =&gt; void;
 };
@@ -591,8 +599,8 @@ export const syncroState = &lt;T extends ObjectShape&gt;({
 	const undoManager = new Y.UndoManager(stateMap);
 &nbsp;
 	let state = $state&lt;State&gt;({
-		remotlySynced: false,
-		locallySynced: <span class="branch-0 cbranch-no" title="branch not covered" >connect ? false : t</span>rue,
+		remotlySynced: <span class="branch-0 cbranch-no" title="branch not covered" >connect ? false : t</span>rue,
+		locallySynced: false,
 		initialized: false,
 		connectionStatus: 'DISCONNECTED',
 		awareness,
@@ -602,8 +610,6 @@ export const syncroState = &lt;T extends ObjectShape&gt;({
 			state.doc.transact(fn, TRANSACTION_KEY);
 		},
 		transactionKey: TRANSACTION_KEY,
-		sharedType: stateMap,
-		sharedTypes: {},
 		undo: () =&gt; {
 			if (undoManager?.canUndo()) {
 				undoManager.undo();
@@ -620,7 +626,7 @@ export const syncroState = &lt;T extends ObjectShape&gt;({
 	const syncroStateProxy = new SyncedObject({
 		// @ts-ignore
 		parent: {
-			// TODO: doest this need to be fixed ? Is this even used a some point ? idk
+			// TODO: does this need to be fixed ? Is this even used a some point ? idk
 			deleteProperty(target, pArg) {
 				logError('Not allowed');
 				return true;
@@ -634,11 +640,19 @@ export const syncroState = &lt;T extends ObjectShape&gt;({
 	});
 &nbsp;
 	const initialize = (doc: Y.Doc, cb: () =&gt; void) =&gt; {
-		const initialized = doc.getText(INITIALIZED)?.toString() === 'true';
+		const text = doc.getText(INITIALIZED);
+&nbsp;
+		const initialized = text?.toString() === INITIALIZED;
+		console.log({ initialized });
 		Object.assign(doc, { initialized });
-		state.initialized = true;
+		state.initialized = initialized;
 		cb();
-		doc.getText(INITIALIZED).insert(0, 'true');
+		state.initialized = true;
+		Object.assign(doc, { initialized: true });
+		if (!initialized) {
+			text.delete(0, text.length);
+			text.insert(0, INITIALIZED);
+		}
 	};
 &nbsp;
 	if (!connect) {
@@ -654,6 +668,7 @@ export const syncroState = &lt;T extends ObjectShape&gt;({
 				initialize(doc, () =&gt; {
 					syncroStateProxy.sync(syncroStateProxy.value);
 					stateMap.observe(syncroStateProxy.observe);
+&nbsp;
 					state.remotlySynced = true;
 				});
 			});
@@ -757,7 +772,7 @@ export const createSyncroState = ({
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-01-09T11:56:16.410Z
+                at 2025-01-09T16:41:47.071Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

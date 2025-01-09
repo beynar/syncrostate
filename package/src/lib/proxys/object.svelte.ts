@@ -5,7 +5,7 @@ import { isInitialized, isMissingOptionnal } from '../utils.js';
 import { type State, type SyncroStates, createSyncroState } from './syncroState.svelte.js';
 import { SyncedArray } from './array.svelte.js';
 import { logError } from '../utils.js';
-import { NULL_OBJECT } from '$lib/constants.js';
+import { NULL_OBJECT, STATE_SYMBOL } from '$lib/constants.js';
 
 const createYTypesObjectProxy = (yType: Y.Map<any>) => {
 	return new Proxy(
@@ -139,17 +139,19 @@ export class SyncedObject {
 
 		const shape = this.validator.$schema.shape;
 
-		const objectState = {
-			...state,
-			yType,
-			yTypes: createYTypesObjectProxy(yType)
-		};
 		this.proxy = new Proxy(
 			{},
 			{
 				get: (target: any, key: any) => {
-					if (key === '$state') {
-						return objectState;
+					if (key === 'getState') {
+						return () => state;
+					}
+					if (key === 'getType') {
+						return () => yType;
+					}
+
+					if (key === 'getTypes') {
+						return () => createYTypesObjectProxy(yType);
 					}
 
 					if (key === 'toJSON') {
@@ -170,6 +172,7 @@ export class SyncedObject {
 					if (value === undefined) {
 						return this.deleteProperty(target, key);
 					}
+
 					const syncroState = this.syncroStates[key];
 					if (!syncroState) {
 						this.state.transaction(() => {

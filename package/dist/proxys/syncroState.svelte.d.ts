@@ -11,17 +11,16 @@ import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
 import { SyncedArray } from './array.svelte.js';
 export type SyncroStates = SyncedText | SyncedNumber | SyncedBoolean | SyncedDate | SyncedEnum | SyncedObject | SyncedArray;
-export type State<T extends 'object' | 'array' = 'object'> = {
+export type State = {
     remotlySynced: boolean;
     locallySynced: boolean;
     connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
     awareness: Awareness;
     doc: Y.Doc;
     undoManager: Y.UndoManager;
+    initialized: boolean;
     transaction: (fn: () => void) => void;
     transactionKey: any;
-    sharedType: Y.Map<any>;
-    sharedTypes: T extends 'object' ? Record<string, Y.AbstractType<any>> : Y.AbstractType<any>[];
     undo: () => void;
     redo: () => void;
 };

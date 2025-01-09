@@ -70,11 +70,6 @@ export const isInitialized = ({ yType }) => {
     // @ts-ignore
     return yType.doc?.initialized;
 };
-export const initialize = (doc, cb) => {
-    Object.assign(doc, { initialized: doc.getText(INITIALIZED)?.toString() === 'true' });
-    cb();
-    doc.getText(INITIALIZED).insert(0, INITIALIZED);
-};
 // From https://github.com/YousefED/SyncedStore/blob/main/packages/core/src/array.ts
 export const propertyToNumber = (p) => {
     if (typeof p === 'string' && p.trim().length) {

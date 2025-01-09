@@ -11,6 +11,10 @@
 	onMount(() => {
 		visible = true;
 	});
+
+	let { data } = $props();
+
+	console.log({ data });
 </script>
 
 <div class="dark">
@@ -20,9 +24,10 @@
 				<div class="text-xl font-bold">syncroState</div>
 				<div class="space-x-6">
 					<a href="#features" class="hover:underline">Features</a>
+					<a href="#demo" class="hover:underline">Demo</a>
 					<a href="#about" class="hover:underline">About</a>
 					<a
-						href="https://github.com/yourusername/syncroState"
+						href="https://github.com/beynar/syncrostate"
 						target="_blank"
 						rel="noopener noreferrer"
 						class="hover:underline">GitHub</a
@@ -32,16 +37,14 @@
 		</header>
 
 		<section class="container mx-auto px-6 py-24 text-center">
-			{#if visible}
-				<h1 transition:fade={{ duration: 500 }} class="mb-4 text-4xl font-bold">syncroState</h1>
-				<p transition:fade={{ duration: 500, delay: 200 }} class="mb-8 text-xl">
-					Bringing Svelte reactivity to the multiplayer level
-				</p>
+			<h1 transition:fade={{ duration: 500 }} class="mb-4 text-4xl font-bold">syncroState</h1>
+			<p transition:fade={{ duration: 500, delay: 200 }} class="mb-8 text-xl">
+				Bringing Svelte reactivity to the multiplayer level
+			</p>
 
-				<div class="mockup-code mx-auto max-w-[100px] border border-white/10">
-					<pre data-prefix="$"><code>pnpm add syncroState</code></pre>
-				</div>
-			{/if}
+			<div class="mockup-code mx-auto max-w-[100px] border border-white/10">
+				<pre data-prefix="$"><code>pnpm add syncroState</code></pre>
+			</div>
 		</section>
 
 		<Features />
@@ -83,7 +86,7 @@
 
 		<footer class="border-t border-white/10 py-8">
 			<div class="container mx-auto px-6 text-center text-white/70">
-				<p>&copy; {new Date().getFullYear()} syncroState. Open-source project.</p>
+				<p>&copy; {new Date().getFullYear()} beynar. Open-source project. MIT License.</p>
 				<div class="mt-4 space-x-6">
 					<a
 						href="https://github.com/yourusername/syncroState"
@@ -91,8 +94,9 @@
 						rel="noopener noreferrer"
 						class="hover:text-white">GitHub</a
 					>
-					<a href="#" class="hover:text-white">Documentation</a>
-					<a href="#" class="hover:text-white">Examples</a>
+					<a href="https://github.com/yourusername/syncroState" class="hover:text-white"
+						>Documentation</a
+					>
 				</div>
 			</div>
 		</footer>

@@ -1,23 +1,25 @@
 import { describe, it, expect, beforeEach, afterEach, test, beforeAll } from 'vitest';
-import { syncroState, y } from '../../lib/index.js';
-import { tick } from 'svelte';
+import { getSyncroState, syncroState, y } from '../../lib/index.js';
 
-const state = syncroState({
-	schema: {
-		array: y.array(y.string()),
-		nullableArray: y.array(y.string()).nullable(),
-		optionalArray: y.array(y.string()).optional(),
-		nullableOptionalArray: y.array(y.string()).nullable().optional(),
-		arrayWithDefault: y.array(y.string()).default(['default']),
-		arrayWithDefaultAndOptional: y.array(y.string()).default(['default']).optional(),
-		arrayWithDefaultAndNullable: y.array(y.string()).default(['default']).nullable(),
-		arrayWithDefaultAndNullableAndOptional: y
-			.array(y.string())
-			.default(['default'])
-			.nullable()
-			.optional()
-	}
-});
+let createDocument = () =>
+	syncroState({
+		schema: {
+			array: y.array(y.string()),
+			nullableArray: y.array(y.string()).nullable(),
+			optionalArray: y.array(y.string()).optional(),
+			nullableOptionalArray: y.array(y.string()).nullable().optional(),
+			arrayWithDefault: y.array(y.string()).default(['default']),
+			arrayWithDefaultAndOptional: y.array(y.string()).default(['default']).optional(),
+			arrayWithDefaultAndNullable: y.array(y.string()).default(['default']).nullable(),
+			arrayWithDefaultAndNullableAndOptional: y
+				.array(y.string())
+				.default(['default'])
+				.nullable()
+				.optional()
+		}
+	});
+
+let state = createDocument();
 
 describe('ArrayProxy', () => {
 	describe('Initial values', () => {

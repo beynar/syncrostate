@@ -9,7 +9,7 @@ import { ObjectValidator, type ObjectSchema, type ObjectShape } from './object.j
 import { RichTextValidator, type RichTextSchema } from './richtext.js';
 import { NumberValidator, type NumberSchema } from './number.js';
 import type { State } from '$lib/proxys/syncroState.svelte.js';
-
+import type { Array as YArray, Map as YMap } from 'yjs';
 export type Schema =
 	| ArraySchema<any>
 	| ObjectSchema<any>
@@ -36,6 +36,14 @@ export const y = {
 	number: () => new NumberValidator()
 };
 
+// I need to add these properties as optional because of typescript.
+// Looking for a better solution.
+type Getters<T extends 'object' | 'array'> = {
+	getState?: () => State;
+	getTypes?: () => T extends 'array' ? YArray<any> : YMap<any>;
+	getYTypes?: () => T extends 'array' ? YArray<any> : YMap<any>;
+};
+
 type NORO<N extends boolean, O extends boolean, T> = N extends true
 	? O extends true
 		? T | null | undefined
@@ -50,9 +58,10 @@ type InferSchemaType<T> =
 		: T extends BaseValidator<infer S, infer O, infer N>
 			? NORO<N, O, S extends BaseSchema<infer T> ? T : never>
 			: T extends ArrayValidator<infer Shape>
-				? InferSchemaType<Shape>[] & { $state: State }
+				? InferSchemaType<Shape>[] & Getters<'array'>
 				: never;
 
 export type SchemaOutput<T extends ObjectShape> = Simplify<{
 	[K in keyof T]: InferSchemaType<T[K]>;
-}> & { $state: State };
+}> &
+	Getters<'object'>;

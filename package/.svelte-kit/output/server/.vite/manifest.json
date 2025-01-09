@@ -72,7 +72,7 @@
       "_index.js"
     ],
     "css": [
-      "_app/immutable/assets/_layout.BpzShFYN.css"
+      "_app/immutable/assets/_layout.BvoK3FtL.css"
     ]
   },
   "src/routes/+page.svelte": {
@@ -83,6 +83,9 @@
     "imports": [
       "_escaping.js",
       "_index.js"
+    ],
+    "css": [
+      "_app/immutable/assets/_page.BEHUn5zE.css"
     ]
   },
   "src/routes/proxy/+page.svelte": {

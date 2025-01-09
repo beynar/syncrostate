@@ -4,6 +4,14 @@ SyncroState brings Svelte 5 reactivity to the multiplayer level. Built on top of
 
 Inspired by [Syncedstore](https://github.com/yousefed/SyncedStore), SyncroState modernizes the approach with Svelte 5's powerful reactivity system to create a more flexible and intuitive developer experience.
 
+> **Note to Svelte Hackathon Organizers**
+>
+> This project is my submission for the Svelte Hackathon. Thank you for organizing this amazing event!
+>
+> For testing: You can run the test suite in the `/package` folder using the `test:unit` command or run the sveltekit app inside the `/package` folder using the `dev` command or run the demo in the `/demo` folder using the `dev` command.
+>
+> ⚠️ The demo uses a public Liveblocks API key which may become rate-limited. I recommend using your own API key for thorough testing.
+
 ## Features
 
 - 🚀 **Powered by Yjs** - Industry-leading CRDT for conflict-free real-time collaboration
@@ -47,7 +55,7 @@ Once created, you can use the state like a regular Svelte state: mutate it, bind
 	import { LiveblocksYjsProvider } from '@liveblocks/yjs';
 	import { createClient } from '@liveblocks/client';
 
-	const state = syncroState({
+	const document = syncroState({
 		// Optional: Connect to a real-time provider
 		// If omitted, state will be local-only during development
 		connect: () => {
@@ -86,8 +94,8 @@ Once created, you can use the state like a regular Svelte state: mutate it, bind
 </script>
 
 <!-- Use it like regular Svelte state -->
-<input bind:value={state.name} />
-<button on:click={() => state.todos.push({ title: 'New todo', completed: false })}>
+<input bind:value={document.name} />
+<button onclick={() => document.todos.push({ title: 'New todo', completed: false })}>
 	Add Todo
 </button>
 ```
@@ -162,17 +170,21 @@ state.user = {
 ### Waiting for the state to be synced
 
 When you are using a remote provider, you might want to wait for the state to be synced before doing something.
-The syncrostate object has a `$state.remotlySynced` property that you can use to wait for the state to be synced.
+The syncrostate object has a `getState()` methods that return the state of the syncronisation from which you can get the `remotlySynced` property to check if the state is synced.
 
 ```svelte
-{#if synced.$state.remotlySynced}
-	<div>My name is {synced.name}</div>
+{#if document.getState?.().remotlySynced}
+	<div>My name is {document.name}</div>
 {/if}
 ```
 
 ### Accessing the underlying Yjs document and shared types
 
-Every syncrostate object or array has a `$state` property of the following type:
+Every syncrostate object or array has three additional methods: `getState`, `getTypes` and `getYTypes`.
+
+- `getState` returns the state `type State` of the syncronisation.
+- `getYTypes` returns the underlying YObject or YArray.
+- `getTypes` returns the YJS types children of the YObject or YArray.
 
 ```ts
 type State<T extends "object" | "array"> {
@@ -184,18 +196,14 @@ type State<T extends "object" | "array"> {
   undoManager: Y.UndoManager;
   transaction: (fn: () => void) => void;
   transactionKey: any;
-  sharedType: Y.Map<any>;
-  sharedTypes: T extends "object" ? Record<string, Y.AbstractType<any>> : Y.AbstractType<any>[];
   undo: () => void;
   redo: () => void;
 }
 ```
 
-You can access the current object or array share type using the `$state.sharedType` property and its shared types children using the `$state.sharedTypes` property.
-
 ### Undo/Redo
 
-SyncroState uses Yjs's undo/redo system to provide undo/redo functionality. These methods are available on the `$state` property.
+SyncroState uses Yjs's undo/redo system to provide undo/redo functionality. These methods are available through the `getState` method.
 
 ## Roadmap
 

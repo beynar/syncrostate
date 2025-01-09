@@ -7,9 +7,9 @@ import { SyncedDate } from './date.svelte.js';
 import { SyncedBoolean } from './boolean.svelte.js';
 import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
-import { getTypeFromParent, initialize, logError } from '../utils.js';
+import { getTypeFromParent, logError } from '../utils.js';
 import { onMount, setContext } from 'svelte';
-import { CONTEXT_KEY, TRANSACTION_KEY } from '../constants.js';
+import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '../constants.js';
 import { SyncedArray } from './array.svelte.js';
 // For testing purpose
 const safeSetContext = (key, value) => {
@@ -27,8 +27,9 @@ export const syncroState = ({ schema, connect }) => {
     const stateMap = doc.getMap('$state');
     const undoManager = new Y.UndoManager(stateMap);
     let state = $state({
-        remotlySynced: false,
-        locallySynced: connect ? false : true,
+        remotlySynced: connect ? false : true,
+        locallySynced: false,
+        initialized: false,
         connectionStatus: 'DISCONNECTED',
         awareness,
         doc,
@@ -37,8 +38,6 @@ export const syncroState = ({ schema, connect }) => {
             state.doc.transact(fn, TRANSACTION_KEY);
         },
         transactionKey: TRANSACTION_KEY,
-        sharedType: stateMap,
-        sharedTypes: {},
         undo: () => {
             if (undoManager?.canUndo()) {
                 undoManager.undo();
@@ -54,7 +53,7 @@ export const syncroState = ({ schema, connect }) => {
     const syncroStateProxy = new SyncedObject({
         // @ts-ignore
         parent: {
-            // TODO: doest this need to be fixed ? Is this even used a some point ? idk
+            // TODO: does this need to be fixed ? Is this even used a some point ? idk
             deleteProperty(target, pArg) {
                 logError('Not allowed');
                 return true;
@@ -66,6 +65,20 @@ export const syncroState = ({ schema, connect }) => {
         observe: false,
         yType: stateMap
     });
+    const initialize = (doc, cb) => {
+        const text = doc.getText(INITIALIZED);
+        const initialized = text?.toString() === INITIALIZED;
+        console.log({ initialized });
+        Object.assign(doc, { initialized });
+        state.initialized = initialized;
+        cb();
+        state.initialized = true;
+        Object.assign(doc, { initialized: true });
+        if (!initialized) {
+            text.delete(0, text.length);
+            text.insert(0, INITIALIZED);
+        }
+    };
     if (!connect) {
         initialize(doc, () => {
             syncroStateProxy.sync(syncroStateProxy.value);

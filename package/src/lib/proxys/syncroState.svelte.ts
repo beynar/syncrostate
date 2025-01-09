@@ -38,7 +38,7 @@ const safeSetContext = (key: string, value: any) => {
 	}
 };
 
-export type State<T extends 'object' | 'array' = 'object'> = {
+export type State = {
 	remotlySynced: boolean;
 	locallySynced: boolean;
 	connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
@@ -48,8 +48,6 @@ export type State<T extends 'object' | 'array' = 'object'> = {
 	initialized: boolean;
 	transaction: (fn: () => void) => void;
 	transactionKey: any;
-	sharedType: Y.Map<any>;
-	sharedTypes: T extends 'object' ? Record<string, Y.AbstractType<any>> : Y.AbstractType<any>[];
 	undo: () => void;
 	redo: () => void;
 };
@@ -68,8 +66,8 @@ export const syncroState = <T extends ObjectShape>({
 	const undoManager = new Y.UndoManager(stateMap);
 
 	let state = $state<State>({
-		remotlySynced: false,
-		locallySynced: connect ? false : true,
+		remotlySynced: connect ? false : true,
+		locallySynced: false,
 		initialized: false,
 		connectionStatus: 'DISCONNECTED',
 		awareness,
@@ -79,8 +77,6 @@ export const syncroState = <T extends ObjectShape>({
 			state.doc.transact(fn, TRANSACTION_KEY);
 		},
 		transactionKey: TRANSACTION_KEY,
-		sharedType: stateMap,
-		sharedTypes: {},
 		undo: () => {
 			if (undoManager?.canUndo()) {
 				undoManager.undo();
@@ -97,7 +93,7 @@ export const syncroState = <T extends ObjectShape>({
 	const syncroStateProxy = new SyncedObject({
 		// @ts-ignore
 		parent: {
-			// TODO: doest this need to be fixed ? Is this even used a some point ? idk
+			// TODO: does this need to be fixed ? Is this even used a some point ? idk
 			deleteProperty(target, pArg) {
 				logError('Not allowed');
 				return true;
@@ -111,11 +107,19 @@ export const syncroState = <T extends ObjectShape>({
 	});
 
 	const initialize = (doc: Y.Doc, cb: () => void) => {
-		const initialized = doc.getText(INITIALIZED)?.toString() === 'true';
+		const text = doc.getText(INITIALIZED);
+
+		const initialized = text?.toString() === INITIALIZED;
+		console.log({ initialized });
 		Object.assign(doc, { initialized });
-		state.initialized = true;
+		state.initialized = initialized;
 		cb();
-		doc.getText(INITIALIZED).insert(0, 'true');
+		state.initialized = true;
+		Object.assign(doc, { initialized: true });
+		if (!initialized) {
+			text.delete(0, text.length);
+			text.insert(0, INITIALIZED);
+		}
 	};
 
 	if (!connect) {
@@ -131,6 +135,7 @@ export const syncroState = <T extends ObjectShape>({
 				initialize(doc, () => {
 					syncroStateProxy.sync(syncroStateProxy.value);
 					stateMap.observe(syncroStateProxy.observe);
+
 					state.remotlySynced = true;
 				});
 			});

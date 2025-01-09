@@ -25,10 +25,8 @@
     // Import syncroState and y (the schema builder)
     import { syncroState, y } from 'syncrostate';
 
-
-
     // Declare the syncroState
-    const synced = syncroState({
+    const document = syncroState({
     // Return a promise that resolves when the remote document is synced
 		connect: async ({ doc }) => {
             // Create a liveblocks client
@@ -36,9 +34,6 @@
                 publicApiKey: ''
             });
             const { room } = client.enterRoom('your-room-id-10');
-            room.subscribe('others', (others) => {
-                users = others.length;
-            });
 			return new Promise((resolve, reject) => {
 				const yProvider = new LiveblocksYjsProvider(room, doc);
 				yProvider.on('synced', () => {
@@ -62,7 +57,7 @@
 
     <button onclick={() => {
         // Mutate the state
-        synced.nodes.push({
+        document.nodes.push({
             type: 'rect',
             x: 100,
             y: 100,

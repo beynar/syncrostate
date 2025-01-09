@@ -2,6 +2,10 @@ import { e as escape_html } from "../../chunks/escaping.js";
 import { s as setContext, c as pop, p as push } from "../../chunks/index.js";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
+import hljs from "highlight.js";
+import javascript from "highlight.js/lib/languages/json";
+import { LiveblocksYjsProvider } from "@liveblocks/yjs";
+import { createClient } from "@liveblocks/client";
 const NULL = `$/_NULL_/$`;
 const NULL_ARRAY = `$/_NULL_ARRAY_/$`;
 const NULL_OBJECT = `$/_NULL_OBJECT_/$`;
@@ -80,11 +84,6 @@ const getInstance = (validator) => {
 const isInitialized = ({ yType }) => {
   return yType.doc?.initialized;
 };
-const initialize = (doc, cb) => {
-  Object.assign(doc, { initialized: doc.getText(INITIALIZED)?.toString() === "true" });
-  cb();
-  doc.getText(INITIALIZED).insert(0, INITIALIZED);
-};
 const propertyToNumber = (p) => {
   if (typeof p === "string" && p.trim().length) {
     const asNum = Number(p);
@@ -96,7 +95,7 @@ const propertyToNumber = (p) => {
 };
 const createYTypesArrayProxy = (yType) => {
   return new Proxy([], {
-    get: (target, key) => {
+    get: (_target, key) => {
       const index = propertyToNumber(key);
       if (typeof index === "number" && index >= 0 && index < yType.length) {
         return yType.get(index);
@@ -115,6 +114,7 @@ class SyncedArray {
   proxy;
   initialized = false;
   isNull = false;
+  // array: any[] = $state(this.syncroStates.map((state) => state.value));
   //🚨 Using a derived would be preferable but it breaks the tests :/
   // private array = $derived(this.syncroStates.map((state) => state.value));
   get array() {
@@ -202,15 +202,16 @@ class SyncedArray {
     this.state = state;
     yType.observe(this.observe);
     const shape = this.validator.$schema.shape;
-    const arrayState = {
-      ...state,
-      yType,
-      yTypes: createYTypesArrayProxy(yType)
-    };
     this.proxy = new Proxy([], {
       get: (target, pArg, receiver) => {
-        if (pArg === "$state") {
-          return arrayState;
+        if (pArg === "getState") {
+          return () => state;
+        }
+        if (pArg === "getType") {
+          return () => this.yType;
+        }
+        if (pArg === "getTypes") {
+          return () => createYTypesArrayProxy(this.yType);
         }
         const p = propertyToNumber(pArg);
         if (Number.isInteger(p)) {
@@ -319,7 +320,7 @@ class SyncedArray {
         this.isNull = true;
         return;
       }
-      if (value) {
+      if (this.state.initialized || value) {
         for (let i = 0; i < Math.max(value?.length || 0, this.yType.length); i++) {
           this.syncroStates[i] = createSyncroState({
             key: i,
@@ -614,15 +615,16 @@ class SyncedObject {
     this.baseImplementation = baseImplementation;
     this.initialized = isInitialized(this);
     const shape = this.validator.$schema.shape;
-    const objectState = {
-      ...state,
-      yType,
-      yTypes: createYTypesObjectProxy(yType)
-    };
     this.proxy = new Proxy({}, {
       get: (target, key2) => {
-        if (key2 === "$state") {
-          return objectState;
+        if (key2 === "getState") {
+          return () => state;
+        }
+        if (key2 === "getType") {
+          return () => yType;
+        }
+        if (key2 === "getTypes") {
+          return () => createYTypesObjectProxy(yType);
         }
         if (key2 === "toJSON") {
           return this.toJSON();
@@ -1064,8 +1066,9 @@ const syncroState = ({ schema, connect }) => {
   const stateMap = doc.getMap("$state");
   const undoManager = new Y.UndoManager(stateMap);
   let state = {
-    remotlySynced: false,
-    locallySynced: connect ? false : true,
+    remotlySynced: connect ? false : true,
+    locallySynced: false,
+    initialized: false,
     connectionStatus: "DISCONNECTED",
     awareness,
     doc,
@@ -1074,8 +1077,6 @@ const syncroState = ({ schema, connect }) => {
       state.doc.transact(fn, TRANSACTION_KEY);
     },
     transactionKey: TRANSACTION_KEY,
-    sharedType: stateMap,
-    sharedTypes: {},
     undo: () => {
       if (undoManager?.canUndo()) {
         undoManager.undo();
@@ -1101,6 +1102,20 @@ const syncroState = ({ schema, connect }) => {
     observe: false,
     yType: stateMap
   });
+  const initialize = (doc2, cb) => {
+    const text = doc2.getText(INITIALIZED);
+    const initialized = text?.toString() === INITIALIZED;
+    console.log({ initialized });
+    Object.assign(doc2, { initialized });
+    state.initialized = initialized;
+    cb();
+    state.initialized = true;
+    Object.assign(doc2, { initialized: true });
+    if (!initialized) {
+      text.delete(0, text.length);
+      text.insert(0, INITIALIZED);
+    }
+  };
   if (!connect) {
     initialize(doc, () => {
       syncroStateProxy.sync(syncroStateProxy.value);
@@ -1545,45 +1560,49 @@ const y = {
 };
 function _page($$payload, $$props) {
   push();
-  const synced = syncroState({
-    // connect: async ({ doc }) => {
-    // 	return new Promise((resolve, reject) => {
-    // 		const client = createClient({
-    // 			publicApiKey: 'pk_prod_TXiiCUekyBO_3gntGdLDEyqmJ0Qc6AqyfAoz0Pntk5JlzC4sSWFmjh4cP73rWXpm'
-    // 		});
-    // 		const { room } = client.enterRoom('your-room-id-5');
-    // 		const yProvider = new LiveblocksYjsProvider(room, doc);
-    // 		yProvider.on('synced', () => {
-    // 			resolve();
-    // 		});
-    // 	});
-    // },
+  hljs.registerLanguage("javascript", javascript);
+  const document = syncroState({
+    connect: async ({ doc }) => {
+      return new Promise((resolve, reject) => {
+        const client = createClient({
+          publicApiKey: "pk_prod_ytItHgLSil9pFkJELGPI7yWptk_jNMifKfv3JhWODRGX2vK3hrt-3oNzDkrc1kcx"
+        });
+        const { room } = client.enterRoom("your-room-id-10");
+        const yProvider = new LiveblocksYjsProvider(room, doc);
+        yProvider.on("synced", () => {
+          resolve();
+        });
+      });
+    },
     schema: {
-      name: y.string().default("John").optional(),
-      gender: y.enum("male", "female").default("female").nullable(),
-      firstName: y.string().default("Doe"),
-      birthday: y.date().default(/* @__PURE__ */ new Date()).nullable(),
-      age: y.number().nullable().default(30),
-      friends: y.array(y.string().optional()).default(["Test"]),
+      name: y.string().default("Bob").optional(),
+      firstName: y.string().default("Smith"),
+      birthday: y.date().default(/* @__PURE__ */ new Date("2000-01-01")).nullable(),
+      age: y.number().nullable().default(25),
+      friends: y.array(y.string().optional()).default(["Alice", "Charlie"]),
       family: y.array(y.object({ name: y.string() })),
-      nodes: y.array(y.object({
-        type: y.enum("rect", "circle"),
-        x: y.number(),
-        y: y.number(),
-        width: y.number(),
-        height: y.number(),
-        fill: y.string()
+      todos: y.array(y.object({
+        title: y.string(),
+        done: y.boolean(),
+        priority: y.enum("low", "medium", "high")
       })),
-      father: y.object({
-        name: y.string().default("Alfred"),
-        wife: y.object({ name: y.string() })
+      profile: y.object({
+        bio: y.string().default("Hello world"),
+        settings: y.object({
+          theme: y.enum("light", "dark").default("light"),
+          notifications: y.boolean().default(true)
+        })
       }).optional()
     }
   });
-  let friends = ["John"];
-  if (synced.$state.remotlySynced) {
+  JSON.stringify(document, null, 2);
+  if (document.getState().remotlySynced) {
     $$payload.out += "<!--[-->";
-    $$payload.out += `<div class="prose prose-sm"><code>${escape_html(JSON.stringify(synced, null, 2))}</code></div> <div class="prose prose-sm"><code>${escape_html(JSON.stringify(friends, null, 2))}</code></div> <div class="grid gap-2"><button>Push node</button> <button>name: ${escape_html(synced.name)}</button> <button>family name: ${escape_html(synced.family?.[0]?.name)}</button> <button>set friends[0] ${escape_html(synced.friends[0])}</button> <button>reset friends</button> <button>splice friends</button> <button>push friends</button> <button>pop friends</button> <button>unshift friends</button> <button>delete friends</button> <button>set friends</button></div>`;
+    $$payload.out += `<div class="grid grid-cols-2 gap-2 p-10"><div class="flex flex-col gap-4"><div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Basic Properties</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-primary">${escape_html(document.name)}</button> <button class="btn btn-primary">Update First Name</button> <button class="btn btn-secondary">Update Age</button> <button class="btn btn-secondary">Update Birthday</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Arrays</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-accent">Add Friend</button> <button class="btn btn-error">Remove Friend</button> <button class="btn btn-info">Add Family</button> <button class="btn btn-success">Add Todo</button> <button class="btn btn-warning">Toggle Last Todo</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Nested Objects</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-warning">Toggle Theme</button> <button class="btn btn-info">Update Bio</button> <button class="btn btn-accent">Toggle Notifications</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Utils</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-warning">Log nested $state</button></div></div></div> <div><div class="mockup-code p-2"><code><!---->`;
+    {
+      $$payload.out += `<pre>es</pre>`;
+    }
+    $$payload.out += `<!----></code></div></div></div>`;
   } else {
     $$payload.out += "<!--[!-->";
   }

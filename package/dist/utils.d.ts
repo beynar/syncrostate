@@ -18,5 +18,4 @@ export declare const logError: (...args: any[]) => void;
 export declare const isInitialized: ({ yType }: {
     yType: Y.AbstractType<any>;
 }) => any;
-export declare const initialize: (doc: Y.Doc, cb: () => void) => void;
 export declare const propertyToNumber: (p: string | number | symbol) => string | number | symbol;
