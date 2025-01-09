@@ -1,24 +1,41 @@
 import * as Y from 'yjs';
-import { isMissingOptionnal } from '../utils.js';
+import { isInitialized, isMissingOptionnal } from '../utils.js';
 import { createSyncroState } from './syncroState.svelte.js';
+import { SyncedArray } from './array.svelte.js';
+import { logError } from '../utils.js';
+import { NULL_OBJECT } from '../constants.js';
+const createYTypesObjectProxy = (yType) => {
+    return new Proxy({}, {
+        get: (target, key) => {
+            if (typeof key === 'string' && yType.has(key)) {
+                return yType.get(key);
+            }
+            return undefined;
+        }
+    });
+};
 export class SyncedObject {
-    INTERNAL_ID;
+    state;
     validator;
     yType;
     syncroStates = $state({});
     baseImplementation = {};
     proxy;
+    parent;
+    key;
+    initialized = false;
+    isNull = $state(false);
     deleteProperty = (target, p) => {
         if (typeof p !== 'string') {
             return true;
         }
         const syncroState = this.syncroStates[p];
         if (!syncroState) {
-            console.error('Property does not exist', p);
+            logError('Property does not exist', p);
             return true;
         }
         else if (!syncroState.validator.$schema.optional) {
-            console.error('Can not delete non optional property', p);
+            logError('Can not delete non optional property', p);
             return true;
         }
         this.yType.delete(p);
@@ -26,51 +43,81 @@ export class SyncedObject {
         delete this.syncroStates[p];
         return true;
     };
-    transact = (fn) => {
-        this.yType.doc?.transact(fn, this.INTERNAL_ID);
-    };
-    set value(value) {
-        if (!this.validator.isValid(value)) {
-            console.error('Invalid value', { value });
+    setNull() {
+        this.isNull = true;
+        this.yType.set(NULL_OBJECT, new Y.Text(NULL_OBJECT));
+    }
+    set value(input) {
+        const { isValid, value } = this.validator.parse(input);
+        if (!isValid) {
+            logError('Invalid value', { value });
             return;
         }
         const shape = this.validator.$schema.shape;
-        this.transact(() => {
-            const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
-            remainingStates.forEach((key) => {
-                this.syncroStates[key].destroy();
-                delete this.syncroStates[key];
-            });
-            Object.entries(value).forEach(([key, value]) => {
-                if (key in shape) {
-                    if (this.syncroStates[key]) {
-                        this.syncroStates[key].value = value;
-                    }
-                    else {
-                        this.syncroStates[key] = createSyncroState({
-                            key,
-                            validator: shape[key],
-                            parent: this.yType,
-                            value
-                        });
-                    }
+        this.state.transaction(() => {
+            if (!value) {
+                if (value === undefined) {
+                    this.parent.deleteProperty({}, this.key);
                 }
-            });
+                else {
+                    this.setNull();
+                }
+            }
+            else {
+                if (this.isNull) {
+                    this.isNull = false;
+                    this.yType.delete(NULL_OBJECT);
+                }
+                const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
+                remainingStates.forEach((key) => {
+                    this.syncroStates[key].destroy();
+                    delete this.syncroStates[key];
+                    this.yType.delete(key);
+                });
+                Object.entries(value).forEach(([key, value]) => {
+                    if (key in shape) {
+                        const syncroState = this.syncroStates[key];
+                        if (syncroState) {
+                            syncroState.value = value;
+                        }
+                        else {
+                            this.syncroStates[key] = createSyncroState({
+                                key,
+                                validator: shape[key],
+                                parent: this,
+                                state: this.state,
+                                value
+                            });
+                        }
+                    }
+                });
+            }
         });
     }
     get value() {
+        if (this.isNull) {
+            return null;
+        }
         return this.proxy;
     }
-    constructor({ observe = true, validator, yType, baseImplementation = {}, value }) {
-        this.INTERNAL_ID = crypto.randomUUID();
+    constructor({ state, observe = true, validator, yType, baseImplementation = {}, value, parent, key }) {
+        this.parent = parent;
+        this.state = state;
+        this.key = key;
         this.validator = validator;
         this.yType = yType;
         this.baseImplementation = baseImplementation;
+        this.initialized = isInitialized(this);
         const shape = this.validator.$schema.shape;
-        this.proxy = new Proxy(this.baseImplementation, {
+        const objectState = {
+            ...state,
+            yType,
+            yTypes: createYTypesObjectProxy(yType)
+        };
+        this.proxy = new Proxy({}, {
             get: (target, key) => {
-                if (key[0] === '$') {
-                    return Reflect.get(target, key);
+                if (key === '$state') {
+                    return objectState;
                 }
                 if (key === 'toJSON') {
                     return this.toJSON();
@@ -90,11 +137,12 @@ export class SyncedObject {
                 }
                 const syncroState = this.syncroStates[key];
                 if (!syncroState) {
-                    this.transact(() => {
+                    this.state.transaction(() => {
                         this.syncroStates[key] = createSyncroState({
                             key,
                             validator: shape[key],
-                            parent: this.yType,
+                            parent: this,
+                            state: this.state,
                             value
                         });
                     });
@@ -124,29 +172,33 @@ export class SyncedObject {
         });
         if (observe) {
             yType.observe(this.observe);
-            this.sync(value || this.validator.$schema.default);
+            this.sync(value);
         }
     }
     observe = (e, _transaction) => {
-        if (_transaction.origin === this.INTERNAL_ID) {
-            return;
+        if (_transaction.origin !== this.state.transactionKey) {
+            e.changes?.keys.forEach(({ action }, key) => {
+                const syncedType = this.syncroStates[key];
+                if (action === 'delete' && syncedType) {
+                    syncedType.destroy();
+                    delete this.syncroStates[key];
+                }
+                if (action === 'add') {
+                    // If a new key is added to the object and is valid, integrate it
+                    const syncroState = createSyncroState({
+                        key,
+                        validator: this.validator.$schema.shape[key],
+                        state: this.state,
+                        parent: this
+                    });
+                    Object.assign(this.syncroStates, { [key]: syncroState });
+                }
+            });
+            if (this.yType.has(NULL_OBJECT)) {
+                this.isNull = true;
+                return;
+            }
         }
-        e.changes?.keys.forEach(({ action }, key) => {
-            const syncedType = this.syncroStates[key];
-            if (action === 'delete' && syncedType) {
-                syncedType.destroy();
-                delete this.syncroStates[key];
-            }
-            if (action === 'add') {
-                // If a new key is added to the object and is valid, integrate it
-                const syncroState = createSyncroState({
-                    key,
-                    validator: this.validator.$schema.shape[key],
-                    parent: this.yType
-                });
-                Object.assign(this.syncroStates, { [key]: syncroState });
-            }
-        });
     };
     toJSON = () => {
         return Object.entries(this.validator.$schema.shape).reduce((acc, [key, validator]) => {
@@ -158,16 +210,30 @@ export class SyncedObject {
         }, {});
     };
     sync = (value) => {
-        this.syncroStates = {};
-        Object.entries(this.validator.$schema.shape).forEach(([key, validator]) => {
-            if (isMissingOptionnal({ validator, parent: this.yType, key })) {
+        this.state.transaction(() => {
+            this.syncroStates = {};
+            if (this.yType.has(NULL_OBJECT)) {
+                this.isNull = true;
                 return;
             }
-            this.syncroStates[key] = createSyncroState({
-                key,
-                validator: validator,
-                parent: this.yType,
-                value: value?.[key]
+            const hasDefaultValue = this.validator.$schema.default;
+            if (!hasDefaultValue) {
+                if (this.validator.$schema.nullable && !value) {
+                    this.setNull();
+                    return;
+                }
+            }
+            Object.entries(this.validator.$schema.shape).forEach(([key, validator]) => {
+                if (isMissingOptionnal({ validator, parent: this.yType, key })) {
+                    return;
+                }
+                this.syncroStates[key] = createSyncroState({
+                    key,
+                    validator: validator,
+                    parent: this,
+                    value: value?.[key] || this.validator.$schema.default?.[key],
+                    state: this.state
+                });
             });
         });
     };

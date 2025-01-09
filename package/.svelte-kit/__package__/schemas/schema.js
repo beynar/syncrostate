@@ -17,12 +17,3 @@ export const y = {
     array: (shape) => new ArrayValidator(shape),
     number: () => new NumberValidator()
 };
-const schemaTest = {
-    a: y.string().optional(),
-    b: y.object({
-        c: y.string()
-    }),
-    e: y.enum('a', 'b', 'c'),
-    f: y.array(y.string().nullable())
-};
-const test = y.string().nullable();

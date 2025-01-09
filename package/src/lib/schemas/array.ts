@@ -64,13 +64,18 @@ export class ArrayValidator<
 		if (isArray && someValid) {
 			return validItems.map((item) => this.$schema.shape.coerce(item));
 		}
+
+		if (value === null && this.$schema.nullable) {
+			return null;
+		}
+
 		return this.defaultValue;
 	}
 
 	parse(value: any): { isValid: boolean; value: ArrayType<T>[] | null } {
 		const coerced = this.coerce(value);
 		return {
-			isValid: this.isValid(coerced),
+			isValid: this.isValid(value),
 			value: coerced
 		};
 	}

@@ -9,6 +9,7 @@ export declare class DateValidator<O extends boolean = false, N extends boolean 
     min(date: Date): DateValidator<O, N>;
     max(date: Date): DateValidator<O, N>;
     private isStringADate;
+    private get defaultValue();
     isValid: (value: any) => boolean;
     parse(value: string | null): {
         isValid: boolean;

@@ -2,24 +2,29 @@ import * as Y from 'yjs';
 import { NULL } from '../constants.js';
 import type { SyncedArray } from './array.svelte.js';
 import type { SyncedObject } from './object.svelte.js';
+import type { State } from './syncroState.svelte.js';
 
 type ObserverCallback = (e: Y.YEvent<Y.Text>, transact: Y.Transaction) => void;
 
 export class BaseSyncedType {
-	INTERNAL_ID: string;
 	yType: Y.Text;
 	rawValue = $state<string | null>('');
 	observeCallback?: ObserverCallback;
-
-	constructor(
-		yType: Y.Text,
-		private key: string | number,
-		private parent: SyncedObject | SyncedArray
-	) {
-		this.INTERNAL_ID = crypto.randomUUID();
-		this.yType = yType;
-		this.rawValue = yType.toString();
+	state: State;
+	parent: SyncedObject | SyncedArray;
+	key: string | number;
+	constructor(opts: {
+		yType: Y.Text;
+		key: string | number;
+		parent: SyncedObject | SyncedArray;
+		state: State;
+	}) {
+		this.yType = opts.yType;
+		this.rawValue = opts.yType.toString();
 		this.yType.observe(this.observe);
+		this.parent = opts.parent;
+		this.key = opts.key;
+		this.state = opts.state;
 	}
 
 	deletePropertyFromParent = () => {
@@ -27,7 +32,7 @@ export class BaseSyncedType {
 	};
 
 	observe = (e: Y.YEvent<Y.Text>, transact: Y.Transaction) => {
-		if (transact.origin !== this.INTERNAL_ID) {
+		if (transact.origin !== this.state.transactionKey) {
 			this.rawValue = this.yType.toString();
 			this.observeCallback?.(e, transact);
 		}
@@ -41,11 +46,11 @@ export class BaseSyncedType {
 		if (this.rawValue !== value) {
 			const length = this.yType.length;
 			this.rawValue = value;
-			this.yType.doc?.transact(() => {
+			this.state.transaction(() => {
 				this.yType.applyDelta(
 					length ? [{ delete: length }, { insert: value ?? NULL }] : [{ insert: value ?? NULL }]
 				);
-			}, this.INTERNAL_ID);
+			});
 		}
 	}
 }

@@ -34,10 +34,6 @@ export class ObjectValidator<
 		}
 
 		if (typeof value === 'object') {
-			// verify that each key of the shape is present in the value
-			// and that the value is valid for each key
-			// We can still pass extra keys but they will be ignored later on
-			// It's some sort of a "loose" validation
 			return Object.entries(this.$schema.shape).every(([key, validator]) => {
 				return validator.isValid(value[key]);
 			});
@@ -56,6 +52,11 @@ export class ObjectValidator<
 		return this as ObjectValidator<T, O, true>;
 	}
 
+	default(value: SchemaOutput<T>) {
+		this.$schema.default = value;
+		return this as ObjectValidator<T>;
+	}
+
 	coerce(value: any): SchemaOutput<T> | null {
 		const isObject = typeof value === 'object' && value !== null;
 		if (!isObject) {
@@ -69,7 +70,7 @@ export class ObjectValidator<
 
 	parse(value: any): { isValid: boolean; value: SchemaOutput<T> | null } {
 		const coerced = this.coerce(value);
-		const isValid = this.isValid(coerced);
+		const isValid = this.isValid(value);
 		return {
 			isValid,
 			value: isValid ? coerced : null

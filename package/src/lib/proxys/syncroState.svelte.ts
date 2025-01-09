@@ -14,9 +14,9 @@ import type { DateValidator } from '../schemas/date.js';
 import type { BooleanValidator } from '../schemas/boolean.js';
 import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
-import { getInitialStringifiedValue, getTypeFromParent } from '../utils.js';
+import { getTypeFromParent, logError } from '../utils.js';
 import { onMount, setContext } from 'svelte';
-import { CONTEXT_KEY } from '$lib/constants.js';
+import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '$lib/constants.js';
 import { SyncedArray } from './array.svelte.js';
 import type { ArrayValidator } from '$lib/schemas/array.js';
 
@@ -38,16 +38,20 @@ const safeSetContext = (key: string, value: any) => {
 	}
 };
 
-type StateExtras = {
-	$doc: Y.Doc;
-	$connected: boolean;
-	$state: Y.Map<any>;
-	$connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
-	$remotlySynced: boolean;
-	$locallySynced: boolean;
-	$undo: () => void;
-	$redo: () => void;
-	$awareness: Awareness;
+export type State<T extends 'object' | 'array' = 'object'> = {
+	remotlySynced: boolean;
+	locallySynced: boolean;
+	connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
+	awareness: Awareness;
+	doc: Y.Doc;
+	undoManager: Y.UndoManager;
+	initialized: boolean;
+	transaction: (fn: () => void) => void;
+	transactionKey: any;
+	sharedType: Y.Map<any>;
+	sharedTypes: T extends 'object' ? Record<string, Y.AbstractType<any>> : Y.AbstractType<any>[];
+	undo: () => void;
+	redo: () => void;
 };
 
 export const syncroState = <T extends ObjectShape>({
@@ -56,67 +60,79 @@ export const syncroState = <T extends ObjectShape>({
 }: {
 	schema: T;
 	connect?: ({ doc, awareness }: { doc: Y.Doc; awareness: Awareness }) => Promise<void>;
-}): SchemaOutput<T> & StateExtras => {
-	let remotlySynced = $state<boolean>(false);
-	let locallySynced = $state<boolean>(connect ? false : true);
-	let connectionStatus = $state<'CONNECTED' | 'DISCONNECTED' | 'CONNECTING'>('DISCONNECTED');
-	const schemaState = $state(schema);
+}): SchemaOutput<T> => {
 	const doc = new Y.Doc();
 	const awareness = new Awareness(doc);
-	const schemaValidator = new ObjectValidator(schemaState);
+	const schemaValidator = new ObjectValidator(schema);
 	const stateMap = doc.getMap('$state');
-	const syncroStateContext = $state({
-		id: crypto.randomUUID()
-	});
 	const undoManager = new Y.UndoManager(stateMap);
 
-	safeSetContext(CONTEXT_KEY, syncroStateContext);
+	let state = $state<State>({
+		remotlySynced: false,
+		locallySynced: connect ? false : true,
+		initialized: false,
+		connectionStatus: 'DISCONNECTED',
+		awareness,
+		doc,
+		undoManager,
+		transaction: (fn: () => void) => {
+			state.doc.transact(fn, TRANSACTION_KEY);
+		},
+		transactionKey: TRANSACTION_KEY,
+		sharedType: stateMap,
+		sharedTypes: {},
+		undo: () => {
+			if (undoManager?.canUndo()) {
+				undoManager.undo();
+			}
+		},
+		redo: () => {
+			if (undoManager?.canRedo()) {
+				undoManager.redo();
+			}
+		}
+	});
+	safeSetContext(CONTEXT_KEY, state);
 
 	const syncroStateProxy = new SyncedObject({
-		parent: stateMap as any,
+		// @ts-ignore
+		parent: {
+			// TODO: doest this need to be fixed ? Is this even used a some point ? idk
+			deleteProperty(target, pArg) {
+				logError('Not allowed');
+				return true;
+			}
+		},
+		state,
 		key: '$state',
 		validator: schemaValidator,
 		observe: false,
-		yType: stateMap,
-		baseImplementation: {
-			$doc: doc,
-			$state: stateMap,
-			$connected: false,
-			$connectionStatus: connectionStatus,
-			$destroy: () => {
-				undoManager.destroy();
-				awareness.destroy();
-			},
-			get $remotlySynced() {
-				return remotlySynced;
-			},
-			$locallySynced: locallySynced,
-			$undo: () => {
-				if (undoManager?.canUndo()) {
-					undoManager.undo();
-				}
-			},
-			$redo: () => {
-				if (undoManager?.canRedo()) {
-					undoManager.redo();
-				}
-			},
-			$awareness: awareness,
-			$snapshot: {}
-		}
+		yType: stateMap
 	});
 
+	const initialize = (doc: Y.Doc, cb: () => void) => {
+		const initialized = doc.getText(INITIALIZED)?.toString() === 'true';
+		Object.assign(doc, { initialized });
+		state.initialized = true;
+		cb();
+		doc.getText(INITIALIZED).insert(0, 'true');
+	};
+
 	if (!connect) {
-		syncroStateProxy.sync(syncroStateProxy.value);
-		stateMap.observe(syncroStateProxy.observe);
+		initialize(doc, () => {
+			syncroStateProxy.sync(syncroStateProxy.value);
+			stateMap.observe(syncroStateProxy.observe);
+		});
 	}
 
 	onMount(() => {
 		if (connect) {
 			connect({ doc, awareness }).then(() => {
-				syncroStateProxy.sync(syncroStateProxy.value);
-				stateMap.observe(syncroStateProxy.observe);
-				remotlySynced = true;
+				initialize(doc, () => {
+					syncroStateProxy.sync(syncroStateProxy.value);
+					stateMap.observe(syncroStateProxy.observe);
+					state.remotlySynced = true;
+				});
 			});
 		}
 	});
@@ -129,32 +145,64 @@ export const createSyncroState = ({
 	validator,
 	forceNewType,
 	value,
-	parent
+	parent,
+	state
 }: {
 	key: string | number;
 	validator: Validator;
 	value?: any;
 	forceNewType?: boolean;
 	parent: SyncedObject | SyncedArray;
+	state: State;
 }): SyncroStates => {
 	const type = getTypeFromParent({ forceNewType, parent: parent.yType, key, validator, value });
 
 	switch (validator.$schema.kind) {
 		default:
 		case 'string': {
-			return new SyncedText(type as Y.Text, validator as StringValidator, parent, key);
+			return new SyncedText({
+				yType: type as Y.Text,
+				validator: validator as StringValidator,
+				parent,
+				key,
+				state
+			});
 		}
 		case 'number': {
-			return new SyncedNumber(type as Y.Text, validator as NumberValidator, parent, key);
+			return new SyncedNumber({
+				yType: type as Y.Text,
+				validator: validator as NumberValidator,
+				parent,
+				key,
+				state
+			});
 		}
 		case 'boolean': {
-			return new SyncedBoolean(type as Y.Text, validator as BooleanValidator, parent, key);
+			return new SyncedBoolean({
+				yType: type as Y.Text,
+				validator: validator as BooleanValidator,
+				parent,
+				key,
+				state
+			});
 		}
 		case 'date': {
-			return new SyncedDate(type as Y.Text, validator as DateValidator, parent, key);
+			return new SyncedDate({
+				yType: type as Y.Text,
+				validator: validator as DateValidator,
+				parent,
+				key,
+				state
+			});
 		}
 		case 'enum': {
-			return new SyncedEnum(type as Y.Text, validator as EnumValidator<any, any, any>, parent, key);
+			return new SyncedEnum({
+				yType: type as Y.Text,
+				validator: validator as EnumValidator<any, any, any>,
+				parent,
+				key,
+				state
+			});
 		}
 		case 'object': {
 			return new SyncedObject({
@@ -162,8 +210,9 @@ export const createSyncroState = ({
 				validator: validator as ObjectValidator<any>,
 				baseImplementation: {},
 				value,
-				parent: parent,
-				key
+				parent,
+				key,
+				state
 			});
 		}
 		case 'array': {
@@ -171,8 +220,9 @@ export const createSyncroState = ({
 				yType: type as Y.Array<any>,
 				validator: validator as ArrayValidator<any>,
 				value,
-				parent: parent,
-				key
+				parent,
+				key,
+				state
 			});
 		}
 	}

@@ -4,6 +4,7 @@ import { BaseSyncedType } from './base.svelte.js';
 import type { SyncedObject } from './object.svelte.js';
 import type { SyncedArray } from './array.svelte.js';
 import { logError } from '../utils.js';
+import type { State } from './syncroState.svelte.js';
 export class SyncedNumber extends BaseSyncedType {
 	validator: NumberValidator;
 
@@ -23,13 +24,14 @@ export class SyncedNumber extends BaseSyncedType {
 		}
 	}
 
-	constructor(
-		yType: Y.Text,
-		validator: NumberValidator,
-		parent: SyncedObject | SyncedArray,
-		key: string | number
-	) {
-		super(yType, key, parent);
-		this.validator = validator;
+	constructor(opts: {
+		yType: Y.Text;
+		validator: NumberValidator;
+		parent: SyncedObject | SyncedArray;
+		key: string | number;
+		state: State;
+	}) {
+		super(opts);
+		this.validator = opts.validator;
 	}
 }

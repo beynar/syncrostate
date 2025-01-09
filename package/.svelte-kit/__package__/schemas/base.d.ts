@@ -11,10 +11,8 @@ export declare class BaseValidator<S extends BaseSchema<any>, O extends boolean 
     $schema: S;
     isValid: (value: any) => void;
     isValidNullOrUndefined: (value: any) => boolean;
-    validateType(value: any): S extends BaseSchema<infer T> ? T | null : any;
     stringify: (value: any) => string;
     coerce(value: any): S extends BaseSchema<infer T> ? T | null : any;
-    validate(value: any): (S extends BaseSchema<infer T> ? T | null : any) | null;
     constructor(schema: S);
     optional(): BaseValidator<S, true, N>;
     nullable(): BaseValidator<S, O, true>;

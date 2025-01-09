@@ -4,6 +4,7 @@ import * as Y from 'yjs';
 import type { SyncedObject } from './object.svelte.js';
 import type { SyncedArray } from './array.svelte.js';
 import { logError } from '../utils.js';
+import type { State } from './syncroState.svelte.js';
 
 // 🚨🚨🚨 design decision: boolean are defaulted to false if not optionnal or nullable and the value does not exist in the document.
 
@@ -33,13 +34,14 @@ export class SyncedBoolean extends BaseSyncedType {
 		}
 	}
 
-	constructor(
-		yType: Y.Text,
-		validator: BooleanValidator,
-		parent: SyncedObject | SyncedArray,
-		key: string | number
-	) {
-		super(yType, key, parent);
-		this.validator = validator;
+	constructor(opts: {
+		yType: Y.Text;
+		validator: BooleanValidator;
+		parent: SyncedObject | SyncedArray;
+		key: string | number;
+		state: State;
+	}) {
+		super(opts);
+		this.validator = opts.validator;
 	}
 }

@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 import { BaseSyncedType } from './base.svelte.js';
+import { logError } from '../utils.js';
 export class SyncedNumber extends BaseSyncedType {
     validator;
     get value() {
@@ -7,13 +8,18 @@ export class SyncedNumber extends BaseSyncedType {
     }
     set value(value) {
         if (!this.validator.isValid(value)) {
-            console.error('Invalid value', { value });
+            logError('Invalid value', { value });
             return;
         }
-        this.setYValue(this.validator.stringify(value));
+        if (value === undefined) {
+            this.deletePropertyFromParent();
+        }
+        else {
+            this.setYValue(this.validator.stringify(value));
+        }
     }
-    constructor(yType, validator) {
-        super(yType);
-        this.validator = validator;
+    constructor(opts) {
+        super(opts);
+        this.validator = opts.validator;
     }
 }

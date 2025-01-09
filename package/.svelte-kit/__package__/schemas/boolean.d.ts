@@ -4,11 +4,12 @@ export type BooleanSchema = BaseSchema<boolean> & {
 };
 export declare class BooleanValidator<O extends boolean = false, N extends boolean = false> extends BaseValidator<BooleanSchema, O, N> {
     constructor();
+    private get defaultValue();
     isValid: (value: any) => boolean;
     parse(value: string | null): {
         isValid: boolean;
         value: boolean | null;
     };
     coerce(value: string | null): boolean | null;
-    stringify: (value: any) => string;
+    stringify: (value: any) => "$/_NULL_/$" | "true" | "false";
 }

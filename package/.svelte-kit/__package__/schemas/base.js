@@ -1,11 +1,10 @@
 export function isValidNullOrUndefined(value) {
     const isOptionnal = this.$schema.optional;
     const isNullable = this.$schema.nullable;
-    if (value === null && !isNullable) {
-        return false;
-    }
-    if (value === undefined && !isOptionnal) {
-        return false;
+    const isOkNullable = value === null && isNullable;
+    const isOkUndefined = value === undefined && isOptionnal;
+    if (isOkNullable || isOkUndefined) {
+        return true;
     }
     return true;
 }
@@ -15,10 +14,6 @@ export class BaseValidator {
         //
     };
     isValidNullOrUndefined = isValidNullOrUndefined.bind(this);
-    validateType(value) {
-        // @ts-expect-error
-        return null;
-    }
     // Convert data to string format for display/storage
     stringify = (value) => {
         return '';
@@ -27,14 +22,6 @@ export class BaseValidator {
     coerce(value) {
         // @ts-expect-error
         return null;
-    }
-    // Returns the valid value or null. Ensure data strictly matches your schema
-    validate(value) {
-        if (value === null && !this.$schema.nullable)
-            return null;
-        if (value === undefined && !this.$schema.optional)
-            return null;
-        return this.validateType(value);
     }
     constructor(schema) {
         this.$schema = schema;

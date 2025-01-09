@@ -11,11 +11,15 @@ export declare class ArrayValidator<T extends Validator, O extends boolean = fal
     $schema: ArraySchema<T>;
     constructor(shape: T);
     isValidNullOrUndefined: (value: any) => boolean;
+    private get defaultValue();
     isValid: (value: any) => value is ArrayType<T>[];
     optional(): ArrayValidator<T, true, N>;
     nullable(): ArrayValidator<T, O, true>;
-    validate(value: any): T[] | null;
-    coerce(value: any): T[] | null;
+    coerce(value: any): ArrayType<T>[] | null;
+    parse(value: any): {
+        isValid: boolean;
+        value: ArrayType<T>[] | null;
+    };
     default(value: ArrayType<T>[]): ArrayValidator<T>;
 }
 export {};

@@ -8,6 +8,7 @@ import { StringValidator, type StringSchema } from './string.js';
 import { ObjectValidator, type ObjectSchema, type ObjectShape } from './object.js';
 import { RichTextValidator, type RichTextSchema } from './richtext.js';
 import { NumberValidator, type NumberSchema } from './number.js';
+import type { State } from '$lib/proxys/syncroState.svelte.js';
 
 export type Schema =
 	| ArraySchema<any>
@@ -49,24 +50,9 @@ type InferSchemaType<T> =
 		: T extends BaseValidator<infer S, infer O, infer N>
 			? NORO<N, O, S extends BaseSchema<infer T> ? T : never>
 			: T extends ArrayValidator<infer Shape>
-				? InferSchemaType<Shape>[]
+				? InferSchemaType<Shape>[] & { $state: State }
 				: never;
 
 export type SchemaOutput<T extends ObjectShape> = Simplify<{
 	[K in keyof T]: InferSchemaType<T[K]>;
-}>;
-
-const schemaTest = {
-	a: y.string().optional(),
-	b: y.object({
-		c: y.string()
-	}),
-	e: y.enum('a', 'b', 'c'),
-	f: y.array(y.string().nullable())
-};
-
-const test = y.string().nullable();
-type OK = typeof test extends Schema ? true : false;
-type Test = SchemaOutput<typeof schemaTest>;
-
-type C = Test['b'];
+}> & { $state: State };

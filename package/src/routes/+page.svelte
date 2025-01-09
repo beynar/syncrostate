@@ -46,7 +46,7 @@
 	let friends = $state(['John']);
 </script>
 
-{#if synced.$remotlySynced}
+{#if synced.$state.remotlySynced}
 	<div class="prose prose-sm">
 		<code>
 			{JSON.stringify(synced, null, 2)}

@@ -7,6 +7,8 @@ export default {
 	theme: {
 		extend: {}
 	},
-
-	plugins: [typography]
+	daisyui: {
+		themes: ['black']
+	},
+	plugins: [typography, require('daisyui')]
 } as Config;

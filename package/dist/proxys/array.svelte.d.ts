@@ -1,23 +1,31 @@
 import * as Y from 'yjs';
 import type { ArrayValidator } from '../schemas/array.js';
-import { type SyncroStates } from './syncroState.svelte.js';
+import { type State, type SyncroStates } from './syncroState.svelte.js';
+import type { SyncedObject } from './object.svelte.js';
 export declare class SyncedArray<T extends any = any> {
-    INTERNAL_ID: `${string}-${string}-${string}-${string}-${string}`;
+    state: State;
     validator: ArrayValidator<any>;
     yType: Y.Array<any>;
+    parent: SyncedObject | SyncedArray;
+    key: string | number;
     syncroStates: SyncroStates[];
     proxy: any;
+    initialized: boolean;
+    isNull: boolean;
     private get array();
-    private deleteProperty;
-    set value(value: any[]);
-    get value(): any[];
-    constructor({ validator, yType, value }: {
+    deleteProperty: (target: any, pArg: any) => boolean;
+    set value(input: any[] | null | undefined);
+    get value(): any[] | null | undefined;
+    constructor({ validator, yType, value, parent, key, state }: {
         validator: ArrayValidator<any>;
         yType: Y.Array<any>;
         value: any[];
+        parent: SyncedObject | SyncedArray;
+        key: string | number;
+        state: State;
     });
-    transact: (fn: () => void) => void;
     toJSON: () => any[];
+    setNull: () => void;
     sync: (value?: any[]) => void;
     observe: (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;
     methods: {

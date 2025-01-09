@@ -1,28 +1,35 @@
 import * as Y from 'yjs';
 import type { ArrayValidator } from '../schemas/array.js';
-import { createSyncroState, type SyncroStates } from './syncroState.svelte.js';
+import { createSyncroState, type State, type SyncroStates } from './syncroState.svelte.js';
 import type { SyncedObject } from './object.svelte.js';
-import { logError } from '../utils.js';
+import { isInitialized, logError, propertyToNumber } from '../utils.js';
+import { NULL_ARRAY } from '$lib/constants.js';
 
-function propertyToNumber(p: string | number | symbol) {
-	if (typeof p === 'string' && p.trim().length) {
-		const asNum = Number(p);
-		// https://stackoverflow.com/questions/10834796/validate-that-a-string-is-a-positive-integer
-		if (Number.isInteger(asNum)) {
-			return asNum;
+const createYTypesArrayProxy = (yType: Y.Array<any>) => {
+	return new Proxy([], {
+		get: (target, key) => {
+			const index = propertyToNumber(key);
+			if (typeof index === 'number' && index >= 0 && index < yType.length) {
+				return yType.get(index);
+			}
+			return undefined;
 		}
-	}
-	return p;
-}
+	});
+};
 
 export class SyncedArray<T extends any = any> {
-	INTERNAL_ID = crypto.randomUUID();
+	state: State;
 	validator: ArrayValidator<any>;
 	yType: Y.Array<any>;
 	parent: SyncedObject | SyncedArray;
 	key: string | number;
 	syncroStates = $state<SyncroStates[]>([]);
 	proxy: any;
+	initialized: boolean = false;
+	isNull: boolean = $state(false);
+
+	//🚨 Using a derived would be preferable but it breaks the tests :/
+	// private array = $derived(this.syncroStates.map((state) => state.value));
 
 	private get array() {
 		return this.syncroStates.map((state) => state.value);
@@ -47,51 +54,60 @@ export class SyncedArray<T extends any = any> {
 		return true;
 	};
 
-	set value(input: any[]) {
+	set value(input: any[] | null | undefined) {
 		const { isValid, value } = this.validator.parse(input);
 		if (!isValid) {
 			logError('Invalid value', { value });
-			return;
-		}
-		this.transact(() => {
-			if (!value) {
-				if (value === undefined) {
-					this.parent.deleteProperty({}, this.key);
-				} else {
-					// TODO: handle when value is null
-					// we should delete all states
-					// but i do not know how to mark this value as null
-					// in the yjs doc as it is not a YText;
-				}
-			} else {
-				const remainingStates = this.syncroStates.slice(value.length);
-				remainingStates.forEach((state) => {
-					state.destroy();
-				});
-				if (remainingStates.length) {
-					this.yType.delete(value.length, remainingStates.length);
-				}
-
-				this.syncroStates = value.map((item, index) => {
-					const previsousState = this.syncroStates[index];
-					if (previsousState) {
-						previsousState.value = item;
-						return previsousState;
+		} else {
+			this.state.transaction(() => {
+				if (!value) {
+					if (value === undefined) {
+						this.parent.deleteProperty({}, this.key);
 					} else {
-						return createSyncroState({
-							key: index,
-							forceNewType: true,
-							validator: this.validator.$schema.shape,
-							parent: this,
-							value: item
-						});
+						this.setNull();
 					}
-				});
-			}
-		});
+				} else {
+					if (this.isNull) {
+						this.isNull = false;
+						this.yType.delete(0, this.yType.length);
+					}
+					if (!this.isNull) {
+						const remainingStates = this.syncroStates.slice(value.length);
+						remainingStates.forEach((state) => {
+							state.destroy();
+						});
+						if (remainingStates.length) {
+							this.yType.delete(value.length, remainingStates.length);
+						}
+					}
+					// console.log('this.array', this.array, value);
+
+					this.syncroStates = value.map((item, index) => {
+						const previsousState = this.syncroStates[index];
+						// console.log({ item, index, previsousState: !!previsousState });
+
+						if (previsousState) {
+							previsousState.value = item;
+							return previsousState;
+						} else {
+							return createSyncroState({
+								key: index,
+								forceNewType: true,
+								validator: this.validator.$schema.shape,
+								parent: this,
+								value: item,
+								state: this.state
+							});
+						}
+					});
+				}
+			});
+		}
 	}
 	get value() {
-		this.syncroStates;
+		if (this.isNull) {
+			return null;
+		}
 		return this.proxy;
 	}
 
@@ -100,22 +116,36 @@ export class SyncedArray<T extends any = any> {
 		yType,
 		value,
 		parent,
-		key
+		key,
+		state
 	}: {
 		validator: ArrayValidator<any>;
 		yType: Y.Array<any>;
 		value: any[];
 		parent: SyncedObject | SyncedArray;
 		key: string | number;
+		state: State;
 	}) {
 		this.validator = validator;
 		this.yType = yType;
 		this.parent = parent;
 		this.key = key;
+		this.initialized = isInitialized(this);
+		this.state = state;
 		yType.observe(this.observe);
 		const shape = this.validator.$schema.shape;
+
+		const arrayState = {
+			...state,
+			yType,
+			yTypes: createYTypesArrayProxy(yType)
+		};
+
 		this.proxy = new Proxy([], {
 			get: (target: any, pArg: any, receiver: any) => {
+				if (pArg === '$state') {
+					return arrayState;
+				}
 				const p = propertyToNumber(pArg);
 				if (Number.isInteger(p)) {
 					const syncroState = this.syncroStates[p as number];
@@ -147,7 +177,7 @@ export class SyncedArray<T extends any = any> {
 				}
 				return Reflect.get(target, p, receiver);
 			},
-			deleteProperty: this.deleteProperty,
+
 			set: (target: any, pArg: any, value: any) => {
 				const p = propertyToNumber(pArg);
 				if (Number.isInteger(p)) {
@@ -158,12 +188,13 @@ export class SyncedArray<T extends any = any> {
 					const syncroState = this.syncroStates[p as number];
 
 					if (!syncroState) {
-						this.transact(() => {
+						this.state.transaction(() => {
 							this.syncroStates[p as number] = createSyncroState({
 								key: p as number,
 								validator: shape,
 								parent: this,
-								value
+								value,
+								state: this.state
 							});
 						});
 					} else {
@@ -172,6 +203,20 @@ export class SyncedArray<T extends any = any> {
 				}
 				return true;
 			},
+			deleteProperty: this.deleteProperty,
+			has: (target, pArg) => {
+				const p = propertyToNumber(pArg);
+				if (typeof p !== 'number') {
+					// forward to arrayimplementation
+					return Reflect.has(target, p);
+				}
+				if (p < (this.array as any).lengthUntracked && p >= 0) {
+					return true;
+				} else {
+					return false;
+				}
+			},
+
 			getOwnPropertyDescriptor: (target, pArg) => {
 				const p = propertyToNumber(pArg);
 				if (p === 'length') {
@@ -199,62 +244,94 @@ export class SyncedArray<T extends any = any> {
 				return keys;
 			}
 		});
-		this.sync(value || this.validator.$schema.default || []);
-	}
 
-	transact = (fn: () => void) => {
-		this.yType.doc?.transact(() => {
-			fn();
-		}, this.INTERNAL_ID);
-	};
+		this.sync(value);
+	}
 
 	toJSON = () => {
 		return this.array;
 	};
 
+	setNull = () => {
+		this.isNull = true;
+		this.yType.delete(0, this.yType.length);
+		this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+	};
+
 	sync = (value?: any[]) => {
-		this.syncroStates = [];
-		this.yType.forEach((item, index) => {
-			this.syncroStates[index] = createSyncroState({
-				key: index,
-				validator: this.validator.$schema.shape,
-				parent: this,
-				value: value?.[index]
-			});
+		this.state.transaction(() => {
+			this.syncroStates = [];
+			if (
+				this.yType.length === 1 &&
+				this.yType.get(0) instanceof Y.Text &&
+				this.yType.get(0).toString() === NULL_ARRAY
+			) {
+				this.isNull = true;
+				return;
+			}
+			if (value) {
+				for (let i = 0; i < Math.max(value?.length || 0, this.yType.length); i++) {
+					this.syncroStates[i] = createSyncroState({
+						key: i,
+						validator: this.validator.$schema.shape,
+						parent: this,
+						value: value?.[i] || this.validator.$schema.default?.[i],
+						state: this.state
+					});
+				}
+			} else {
+				if (this.validator.$schema.default) {
+					this.syncroStates = this.validator.$schema.default.map((item, index) => {
+						return createSyncroState({
+							key: index,
+							validator: this.validator.$schema.shape,
+							parent: this,
+							value: item,
+							state: this.state
+						});
+					});
+				} else if (this.validator.$schema.nullable && !value) {
+					this.setNull();
+				}
+			}
 		});
 	};
 
 	observe = (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => {
-		if (_transaction.origin === this.INTERNAL_ID) {
-			return;
-		}
-		let start = 0;
-		e.delta.forEach(({ retain, delete: _delete, insert }) => {
-			if (retain) {
-				start += retain;
-			}
-			if (_delete) {
-				const deleted = this.syncroStates.splice(start, _delete);
-				deleted.forEach((state) => {
-					state.destroy();
-				});
-				start -= _delete;
-			}
-			if (Array.isArray(insert)) {
-				for (let i = 0; i < insert.length; i++) {
-					this.syncroStates.splice(
-						start,
-						0,
-						createSyncroState({
-							key: start,
-							validator: this.validator.$schema.shape,
-							parent: this
-						})
-					);
-					start += i + 1;
+		if (_transaction.origin !== this.state.transactionKey) {
+			let start = 0;
+			e.delta.forEach(({ retain, delete: _delete, insert }) => {
+				if (retain) {
+					start += retain;
 				}
-			}
-		});
+				if (_delete) {
+					const deleted = this.syncroStates.splice(start, _delete);
+					deleted.forEach((state) => {
+						state.destroy();
+					});
+					start -= _delete;
+				}
+				if (Array.isArray(insert)) {
+					for (let i = 0; i < insert.length; i++) {
+						if (insert[i] instanceof Y.Text && insert[i].toString() === NULL_ARRAY) {
+							this.isNull = true;
+							return;
+						}
+						this.syncroStates.splice(
+							start,
+							0,
+							createSyncroState({
+								key: start,
+								validator: this.validator.$schema.shape,
+								parent: this,
+								state: this.state
+							})
+						);
+						start += 1;
+					}
+				}
+			});
+		}
 	};
 
 	methods = {
@@ -309,7 +386,7 @@ export class SyncedArray<T extends any = any> {
 				return undefined;
 			}
 			const last = this.syncroStates.pop();
-			this.transact(() => {
+			this.state.transaction(() => {
 				this.yType.delete(this.yType.length - 1, 1);
 				last?.destroy();
 			});
@@ -320,7 +397,7 @@ export class SyncedArray<T extends any = any> {
 				return undefined;
 			}
 			const first = this.syncroStates.shift();
-			this.transact(() => {
+			this.state.transaction(() => {
 				this.yType.delete(0, 1);
 				first?.destroy();
 			});
@@ -328,7 +405,7 @@ export class SyncedArray<T extends any = any> {
 		},
 		unshift: (...items: T[]) => {
 			let result;
-			this.transact(() => {
+			this.state.transaction(() => {
 				result = this.syncroStates.unshift(
 					...items.map((item, index) => {
 						return createSyncroState({
@@ -336,7 +413,8 @@ export class SyncedArray<T extends any = any> {
 							key: index,
 							validator: this.validator.$schema.shape,
 							parent: this,
-							value: item
+							value: item,
+							state: this.state
 						});
 					})
 				);
@@ -344,14 +422,15 @@ export class SyncedArray<T extends any = any> {
 			return result;
 		},
 		push: (...items: T[]) => {
-			this.transact(() => {
+			this.state.transaction(() => {
 				this.syncroStates.push(
 					...items.map((item, index) => {
 						return createSyncroState({
 							key: this.yType.length,
 							validator: this.validator.$schema.shape,
 							parent: this,
-							value: item
+							value: item,
+							state: this.state
 						});
 					})
 				);
@@ -359,7 +438,7 @@ export class SyncedArray<T extends any = any> {
 		},
 		splice: (start: number, deleteCount: number, ..._items: T[]) => {
 			let result: any[] = [];
-			this.transact(() => {
+			this.state.transaction(() => {
 				const newSyncroStates = _items.map((item, index) => {
 					this.yType.delete(start, deleteCount);
 					return createSyncroState({
@@ -367,7 +446,8 @@ export class SyncedArray<T extends any = any> {
 						forceNewType: true,
 						validator: this.validator.$schema.shape,
 						parent: this,
-						value: item
+						value: item,
+						state: this.state
 					});
 				});
 				if (deleteCount) {

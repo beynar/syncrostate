@@ -14,6 +14,10 @@ export declare class ObjectValidator<T extends ObjectShape, O extends boolean = 
     isValid: (value: any) => value is SchemaOutput<T>;
     optional(): ObjectValidator<T, true, N>;
     nullable(): ObjectValidator<T, O, true>;
-    validate(value: any): SchemaOutput<T> | null;
+    default(value: SchemaOutput<T>): ObjectValidator<T>;
     coerce(value: any): SchemaOutput<T> | null;
+    parse(value: any): {
+        isValid: boolean;
+        value: SchemaOutput<T> | null;
+    };
 }

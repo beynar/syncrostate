@@ -1,7 +1,7 @@
 import { g as get_descriptor, i as index_of, d as define_property, a as is_array, b as array_from } from "./utils.js";
 import { s as safe_equals, e as equals } from "./equality.js";
 import { H as HYDRATION_ERROR, a as HYDRATION_START, b as HYDRATION_END, r as render, p as push$1, s as setContext, c as pop$1 } from "./index.js";
-const BROWSER = false;
+const DEV = false;
 let base = "";
 let assets = base;
 const initial = { base, assets };
@@ -73,7 +73,8 @@ function source(v, stack) {
     v,
     reactions: null,
     equals,
-    version: 0
+    rv: 0,
+    wv: 0
   };
   return signal;
 }
@@ -97,7 +98,7 @@ function internal_set(source2, value) {
   if (!source2.equals(value)) {
     source2.v;
     source2.v = value;
-    source2.version = increment_version();
+    source2.wv = increment_write_version();
     mark_reactions(source2, DIRTY);
     if (active_effect !== null && (active_effect.f & CLEAN) !== 0 && (active_effect.f & BRANCH_EFFECT) === 0) {
       if (new_deps !== null && new_deps.includes(source2)) {
@@ -248,7 +249,7 @@ function update_derived(derived) {
   set_signal_status(derived, status);
   if (!derived.equals(value)) {
     derived.v = value;
-    derived.version = increment_version();
+    derived.wv = increment_write_version();
   }
 }
 function destroy_derived(derived) {
@@ -285,7 +286,7 @@ function create_effect(type, fn, sync, push2 = true) {
     prev: null,
     teardown: null,
     transitions: null,
-    version: 0
+    wv: 0
   };
   if (sync) {
     var previously_flushing_effect = is_flushing_effect;
@@ -489,11 +490,12 @@ let untracked_writes = null;
 function set_untracked_writes(value) {
   untracked_writes = value;
 }
-let current_version = 1;
+let write_version = 1;
+let read_version = 0;
 let skip_reaction = false;
 let component_context = null;
-function increment_version() {
-  return ++current_version;
+function increment_write_version() {
+  return ++write_version;
 }
 function is_runes() {
   return true;
@@ -534,7 +536,7 @@ function check_dirtiness(reaction) {
             dependency
           );
         }
-        if (dependency.version > reaction.version) {
+        if (dependency.wv > reaction.wv) {
           return true;
         }
       }
@@ -599,6 +601,7 @@ function update_reaction(reaction) {
   skip_reaction = !is_flushing_effect && (flags & UNOWNED) !== 0;
   derived_sources = null;
   component_context = reaction.ctx;
+  read_version++;
   try {
     var result = (
       /** @type {Function} */
@@ -691,11 +694,11 @@ function update_effect(effect2) {
     execute_effect_teardown(effect2);
     var teardown = update_reaction(effect2);
     effect2.teardown = typeof teardown === "function" ? teardown : null;
-    effect2.version = current_version;
+    effect2.wv = write_version;
     var deps = effect2.deps;
     var dep;
-    if (BROWSER && tracing_mode_flag && (effect2.f & DIRTY) !== 0 && deps !== null) ;
-    if (BROWSER) ;
+    if (DEV && tracing_mode_flag && (effect2.f & DIRTY) !== 0 && deps !== null) ;
+    if (DEV) ;
   } catch (error) {
     handle_error(error, effect2, previous_effect, previous_component_context || effect2.ctx);
   } finally {
@@ -865,7 +868,7 @@ function flush_sync(fn) {
     }
     flush_count = 0;
     last_scheduled_effect = null;
-    if (BROWSER) ;
+    if (DEV) ;
     return result;
   } finally {
     scheduler_mode = previous_scheduler_mode;
@@ -891,16 +894,19 @@ function get(signal) {
       state_unsafe_local_read();
     }
     var deps = active_reaction.deps;
-    if (new_deps === null && deps !== null && deps[skipped_deps] === signal) {
-      skipped_deps++;
-    } else if (new_deps === null) {
-      new_deps = [signal];
-    } else {
-      new_deps.push(signal);
-    }
-    if (untracked_writes !== null && active_effect !== null && (active_effect.f & CLEAN) !== 0 && (active_effect.f & BRANCH_EFFECT) === 0 && untracked_writes.includes(signal)) {
-      set_signal_status(active_effect, DIRTY);
-      schedule_effect(active_effect);
+    if (signal.rv < read_version) {
+      signal.rv = read_version;
+      if (new_deps === null && deps !== null && deps[skipped_deps] === signal) {
+        skipped_deps++;
+      } else if (new_deps === null) {
+        new_deps = [signal];
+      } else {
+        new_deps.push(signal);
+      }
+      if (untracked_writes !== null && active_effect !== null && (active_effect.f & CLEAN) !== 0 && (active_effect.f & BRANCH_EFFECT) === 0 && untracked_writes.includes(signal)) {
+        set_signal_status(active_effect, DIRTY);
+        schedule_effect(active_effect);
+      }
     }
   } else if (is_derived && /** @type {Derived} */
   signal.deps === null) {
@@ -1485,7 +1491,7 @@ const options = {
 		<div class="error">
 			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
   },
-  version_hash: "1vp7qkz"
+  version_hash: "dtmfat"
 };
 async function get_hooks() {
   let handle;
@@ -1504,7 +1510,7 @@ async function get_hooks() {
   };
 }
 export {
-  BROWSER as B,
+  DEV as D,
   assets as a,
   base as b,
   read_implementation as c,

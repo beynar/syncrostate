@@ -1,32 +1,25 @@
 import * as Y from 'yjs';
 import { NULL } from '../constants.js';
-export const getInitialStringifiedValue = (value, validator) => {
-    if (validator.$schema.kind === 'array' || validator.$schema.kind === 'object') {
-        return undefined;
-    }
-    const DEFAULT_VALUE = value === null ? null : (value ?? validator.$schema.default);
-    const isValid = validator.isValid(DEFAULT_VALUE);
-    if (!isValid) {
-        return undefined;
-    }
-    if (DEFAULT_VALUE !== undefined) {
-        const stringifiedDefaultValue = validator.stringify(DEFAULT_VALUE);
-        return stringifiedDefaultValue;
-    }
-};
 export class BaseSyncedType {
-    INTERNAL_ID;
     yType;
     rawValue = $state('');
     observeCallback;
-    constructor(yType) {
-        this.INTERNAL_ID = crypto.randomUUID();
-        this.yType = yType;
-        this.rawValue = yType.toString();
+    state;
+    parent;
+    key;
+    constructor(opts) {
+        this.yType = opts.yType;
+        this.rawValue = opts.yType.toString();
         this.yType.observe(this.observe);
+        this.parent = opts.parent;
+        this.key = opts.key;
+        this.state = opts.state;
     }
+    deletePropertyFromParent = () => {
+        this.parent.deleteProperty({}, this.key);
+    };
     observe = (e, transact) => {
-        if (transact.origin !== this.INTERNAL_ID) {
+        if (transact.origin !== this.state.transactionKey) {
             this.rawValue = this.yType.toString();
             this.observeCallback?.(e, transact);
         }
@@ -38,12 +31,9 @@ export class BaseSyncedType {
         if (this.rawValue !== value) {
             const length = this.yType.length;
             this.rawValue = value;
-            this.yType.doc?.transact(() => {
+            this.state.transaction(() => {
                 this.yType.applyDelta(length ? [{ delete: length }, { insert: value ?? NULL }] : [{ insert: value ?? NULL }]);
-            }, this.INTERNAL_ID);
+            });
         }
-    }
-    [Symbol.dispose]() {
-        this.destroy();
     }
 }

@@ -1,16 +1,24 @@
 import * as Y from 'yjs';
-import type { Validator } from '../schemas/schema.js';
+import type { SyncedArray } from './array.svelte.js';
+import type { SyncedObject } from './object.svelte.js';
+import type { State } from './syncroState.svelte.js';
 type ObserverCallback = (e: Y.YEvent<Y.Text>, transact: Y.Transaction) => void;
-export declare const getInitialStringifiedValue: (value: any, validator: Validator) => string | undefined;
 export declare class BaseSyncedType {
-    INTERNAL_ID: string;
     yType: Y.Text;
     rawValue: string | null;
     observeCallback?: ObserverCallback;
-    constructor(yType: Y.Text);
+    state: State;
+    parent: SyncedObject | SyncedArray;
+    key: string | number;
+    constructor(opts: {
+        yType: Y.Text;
+        key: string | number;
+        parent: SyncedObject | SyncedArray;
+        state: State;
+    });
+    deletePropertyFromParent: () => void;
     observe: (e: Y.YEvent<Y.Text>, transact: Y.Transaction) => void;
     destroy: () => void;
     setYValue(value: string | null): void;
-    [Symbol.dispose](): void;
 }
 export {};

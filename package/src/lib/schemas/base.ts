@@ -29,11 +29,6 @@ export class BaseValidator<
 
 	isValidNullOrUndefined = isValidNullOrUndefined.bind(this);
 
-	validateType(value: any): S extends BaseSchema<infer T> ? T | null : any {
-		// @ts-expect-error
-		return null;
-	}
-
 	// Convert data to string format for display/storage
 	stringify = (value: any) => {
 		return '';
@@ -45,12 +40,6 @@ export class BaseValidator<
 		return null;
 	}
 
-	// Returns the valid value or null. Ensure data strictly matches your schema
-	validate(value: any) {
-		if (value === null && !this.$schema.nullable) return null;
-		if (value === undefined && !this.$schema.optional) return null;
-		return this.validateType(value);
-	}
 	constructor(schema: S) {
 		this.$schema = schema;
 	}

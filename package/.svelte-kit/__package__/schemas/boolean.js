@@ -4,13 +4,20 @@ export class BooleanValidator extends BaseValidator {
     constructor() {
         super({ kind: 'boolean', optional: false, nullable: false });
     }
+    get defaultValue() {
+        return this.$schema.default || null;
+    }
     isValid = (value) => {
-        if (!this.isValidNullOrUndefined(value)) {
-            return false;
+        if (typeof value === 'boolean') {
+            return true;
         }
-        if (typeof value !== 'boolean')
-            return false;
-        return true;
+        if (value === null) {
+            return this.$schema.nullable;
+        }
+        if (value === undefined) {
+            return this.$schema.optional;
+        }
+        return false;
     };
     parse(value) {
         const coerced = this.coerce(value);
@@ -20,22 +27,31 @@ export class BooleanValidator extends BaseValidator {
         };
     }
     coerce(value) {
+        if (value === NULL || value === null) {
+            if (this.$schema.nullable) {
+                return null;
+            }
+            else {
+                return this.defaultValue;
+            }
+        }
         if (value === 'true')
             return true;
         if (value === 'false')
             return false;
-        if (value === NULL || value === null)
-            return null;
-        if (Number(value) === 1)
-            return true;
-        if (Number(value) === 0)
-            return false;
-        return null;
+        return this.$schema.nullable ? null : this.defaultValue;
     }
     stringify = (value) => {
-        if (value === null)
-            return NULL;
-        const coercedValue = this.coerce(value);
-        return coercedValue ? String(coercedValue) : '';
+        if (typeof value === 'boolean') {
+            return value ? 'true' : 'false';
+        }
+        else {
+            if (this.$schema.nullable) {
+                return NULL;
+            }
+            else {
+                return this.defaultValue === null ? NULL : this.defaultValue ? 'true' : 'false';
+            }
+        }
     };
 }

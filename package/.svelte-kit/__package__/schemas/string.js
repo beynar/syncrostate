@@ -4,26 +4,8 @@ export class StringValidator extends BaseValidator {
     constructor() {
         super({ kind: 'string', optional: false, nullable: false });
     }
-    isValid = (value) => {
-        if (!this.isValidNullOrUndefined(value)) {
-            return false;
-        }
-        if (typeof value !== 'string')
-            return false;
-        if (this.$schema.min && value.length < this.$schema.min)
-            return false;
-        if (this.$schema.max && value.length > this.$schema.max)
-            return false;
-        if (this.$schema.pattern && !this.$schema.pattern.test(value))
-            return false;
-        return true;
-    };
-    parse(value) {
-        const coerced = this.coerce(value);
-        return {
-            isValid: this.isValid(coerced),
-            value: coerced
-        };
+    get defaultValue() {
+        return this.$schema.default || null;
     }
     min(length) {
         this.$schema.min = length;
@@ -37,14 +19,60 @@ export class StringValidator extends BaseValidator {
         this.$schema.pattern = regex;
         return this;
     }
+    isValid = (value) => {
+        if (typeof value === 'string') {
+            if (this.$schema.min && value.length < this.$schema.min)
+                return false;
+            if (this.$schema.max && value.length > this.$schema.max)
+                return false;
+            if (this.$schema.pattern && !this.$schema.pattern.test(value))
+                return false;
+            return true;
+        }
+        if (value === NULL || value === null) {
+            return this.$schema.nullable;
+        }
+        if (value === undefined) {
+            return this.$schema.optional;
+        }
+        return false;
+    };
+    parse(value) {
+        const coerced = this.coerce(value);
+        return {
+            isValid: this.isValid(coerced),
+            value: coerced
+        };
+    }
     coerce(value) {
-        if (value === NULL)
-            return null;
-        return value;
+        if (value === NULL || value === null) {
+            if (this.$schema.nullable) {
+                return null;
+            }
+            else {
+                return this.defaultValue;
+            }
+        }
+        if (value === undefined) {
+            // TODO maybe we should return undefined instead of null
+            return this.$schema.nullable ? null : this.defaultValue;
+        }
+        if (typeof value === 'string') {
+            return value;
+        }
+        return this.$schema.nullable ? null : this.defaultValue;
     }
     stringify = (value) => {
-        if (value === null)
-            return NULL;
-        return this.coerce(value)?.toString() ?? '';
+        if (typeof value === 'string') {
+            return value;
+        }
+        else {
+            if (this.$schema.nullable) {
+                return NULL;
+            }
+            else {
+                return this.defaultValue || NULL;
+            }
+        }
     };
 }

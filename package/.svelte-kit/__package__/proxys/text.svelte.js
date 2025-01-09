@@ -1,21 +1,27 @@
 import * as Y from 'yjs';
 import { BaseSyncedType } from './base.svelte.js';
 import { NULL } from '../constants.js';
+import { logError } from '../utils.js';
 export class SyncedText extends BaseSyncedType {
     validator;
     get value() {
         return this.rawValue === NULL ? null : this.rawValue;
     }
     set value(value) {
-        console.log(this.validator.isValid(value));
-        if (!this.validator.isValid(value)) {
-            console.error('Invalid value', { value });
+        const isValid = this.validator.isValid(value);
+        if (!isValid) {
+            logError('Invalid value', { value });
             return;
         }
-        this.setYValue(value);
+        if (value === undefined) {
+            this.deletePropertyFromParent();
+        }
+        else {
+            this.setYValue(this.validator.stringify(value));
+        }
     }
-    constructor(yType, validator) {
-        super(yType);
-        this.validator = validator;
+    constructor(opts) {
+        super(opts);
+        this.validator = opts.validator;
     }
 }

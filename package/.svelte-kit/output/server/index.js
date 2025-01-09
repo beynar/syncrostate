@@ -1,4 +1,4 @@
-import { b as base, a as assets, o as override, r as reset, p as public_env, s as safe_public_env, B as BROWSER, c as read_implementation, d as options, e as set_private_env, f as prerendering, g as set_public_env, h as get_hooks, i as set_safe_public_env, j as set_read_implementation } from "./chunks/internal.js";
+import { b as base, a as assets, o as override, r as reset, p as public_env, s as safe_public_env, D as DEV, c as read_implementation, d as options, e as set_private_env, f as prerendering, g as set_public_env, h as get_hooks, i as set_safe_public_env, j as set_read_implementation } from "./chunks/internal.js";
 import { m as make_trackable, d as disable_search, w as writable, r as readable, n as normalize_path, a as add_data_suffix, b as resolve, c as decode_pathname, h as has_data_suffix, s as strip_data_suffix, e as decode_params, v as validate_layout_server_exports, f as validate_layout_exports, g as validate_page_server_exports, i as validate_page_exports, j as validate_server_exports } from "./chunks/exports.js";
 const SVELTE_KIT_ASSETS = "/_svelte_kit_assets";
 const ENDPOINT_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
@@ -2553,7 +2553,10 @@ async function render_page(event, page, options2, manifest, state, resolve_opts)
         status = action_result.status;
       }
     }
-    const should_prerender_data = nodes.some((node) => node?.server?.load);
+    const should_prerender_data = nodes.some(
+      // prerender in case of trailingSlash because the client retrieves that value from the server
+      (node) => node?.server?.load || node?.server?.trailingSlash !== void 0
+    );
     const data_pathname = add_data_suffix(event.url.pathname);
     const should_prerender = get_option(nodes, "prerender") ?? false;
     if (should_prerender) {
@@ -2569,7 +2572,7 @@ async function render_page(event, page, options2, manifest, state, resolve_opts)
     state.prerender_default = should_prerender;
     const fetched = [];
     if (get_option(nodes, "ssr") === false && !(state.prerendering && should_prerender_data)) {
-      if (BROWSER && action_result && !event.request.headers.has("x-sveltekit-action")) ;
+      if (DEV && action_result && !event.request.headers.has("x-sveltekit-action")) ;
       return await render_response({
         branch: [],
         fetched,
@@ -3509,12 +3512,12 @@ async function respond(request, options2, manifest, state) {
         trailing_slash = "always";
       } else if (route.page) {
         const nodes = await load_page_nodes(route.page, manifest);
-        if (BROWSER) ;
+        if (DEV) ;
         trailing_slash = get_option(nodes, "trailingSlash");
       } else if (route.endpoint) {
         const node = await route.endpoint();
         trailing_slash = node.trailingSlash;
-        if (BROWSER) ;
+        if (DEV) ;
       }
       if (!is_data_request) {
         const normalized = normalize_path(url.pathname, trailing_slash ?? "never");

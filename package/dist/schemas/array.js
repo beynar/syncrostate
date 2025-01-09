@@ -10,13 +10,20 @@ export class ArrayValidator {
         };
     }
     isValidNullOrUndefined = isValidNullOrUndefined.bind(this);
+    get defaultValue() {
+        return this.$schema.default || null;
+    }
     isValid = (value) => {
-        if (!Array.isArray(value))
-            return false;
-        if (!this.isValidNullOrUndefined(value)) {
-            return false;
+        if (Array.isArray(value)) {
+            return value.every((item) => this.$schema.shape.isValid(item));
         }
-        return value.every((item) => this.$schema.shape.isValid(item));
+        if (value === null) {
+            return this.$schema.nullable;
+        }
+        if (value === undefined) {
+            return this.$schema.optional;
+        }
+        return false;
     };
     optional() {
         this.$schema.optional = true;
@@ -26,17 +33,24 @@ export class ArrayValidator {
         this.$schema.nullable = true;
         return this;
     }
-    validate(value) {
-        if (typeof value !== 'object' || value === null)
-            return null;
-        if (!Array.isArray(value))
-            return null;
-        const isNullable = this.$schema.nullable;
-        const allValid = value.every((item) => this.$schema.shape.validate(item) !== null || (isNullable && item === null));
-        return allValid ? value : null;
-    }
     coerce(value) {
-        return this.validate(value);
+        const isArray = Array.isArray(value);
+        const validItems = isArray ? value.filter((item) => this.$schema.shape.isValid(item)) : [];
+        const someValid = validItems.length > 0;
+        if (isArray && someValid) {
+            return validItems.map((item) => this.$schema.shape.coerce(item));
+        }
+        if (value === null && this.$schema.nullable) {
+            return null;
+        }
+        return this.defaultValue;
+    }
+    parse(value) {
+        const coerced = this.coerce(value);
+        return {
+            isValid: this.isValid(value),
+            value: coerced
+        };
     }
     default(value) {
         this.$schema.default = value;

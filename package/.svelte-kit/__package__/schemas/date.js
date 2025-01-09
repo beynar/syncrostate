@@ -20,14 +20,26 @@ export class DateValidator extends BaseValidator {
             return false;
         }
     }
+    get defaultValue() {
+        return this.$schema.default || null;
+    }
     isValid = (value) => {
-        if (!this.isValidNullOrUndefined(value)) {
-            return false;
+        if (value instanceof Date) {
+            if (this.$schema.min && value < this.$schema.min) {
+                return false;
+            }
+            if (this.$schema.max && value > this.$schema.max) {
+                return false;
+            }
+            return true;
         }
-        if (typeof value === 'string' && !this.isStringADate(value)) {
-            return false;
+        if (value === NULL || value === null) {
+            return this.$schema.nullable;
         }
-        return true;
+        if (value === undefined) {
+            return this.$schema.optional;
+        }
+        return false;
     };
     parse(value) {
         const coerced = this.coerce(value);
@@ -37,19 +49,33 @@ export class DateValidator extends BaseValidator {
         };
     }
     coerce(value) {
-        if (value === NULL || value === null)
-            return null;
+        if (value === NULL || value === null || value === undefined) {
+            if (this.$schema.nullable) {
+                return null;
+            }
+            else {
+                return this.defaultValue;
+            }
+        }
+        if (value === undefined) {
+            return this.$schema.optional ? null : this.defaultValue;
+        }
         if (this.isStringADate(value)) {
             return new Date(value);
         }
-        if (Number.isInteger(Number(value)) &&
-            !isNaN(Number(value)) &&
-            !isNaN(new Date(Number(value)).getTime())) {
-            return new Date(Number(value));
-        }
-        return null;
+        return this.$schema.nullable ? null : this.defaultValue;
     }
     stringify = (value) => {
-        return this.coerce(value)?.toISOString() ?? '';
+        if (value instanceof Date) {
+            return value.toISOString();
+        }
+        else {
+            if (this.$schema.nullable) {
+                return NULL;
+            }
+            else {
+                return this.defaultValue?.toISOString() || NULL;
+            }
+        }
     };
 }

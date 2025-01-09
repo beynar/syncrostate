@@ -6,6 +6,7 @@ import { BaseSyncedType } from './base.svelte.js';
 import type { SyncedArray } from './array.svelte.js';
 import type { SyncedObject } from './object.svelte.js';
 import { logError } from '../utils.js';
+import type { State } from './syncroState.svelte.js';
 // 🚨🚨🚨 design decision: date are defaulted to new Date() if not optionnal or nullable and the value does not exist in the document.
 
 const SvelteDateProxy = (onSet: () => void) => {
@@ -80,14 +81,15 @@ export class SyncedDate extends BaseSyncedType {
 		this.setValue(this.rawValue);
 	};
 
-	constructor(
-		yType: Y.Text,
-		validator: DateValidator,
-		parent: SyncedObject | SyncedArray,
-		key: string | number
-	) {
-		super(yType, key, parent);
-		this.validator = validator;
+	constructor(opts: {
+		yType: Y.Text;
+		validator: DateValidator;
+		parent: SyncedObject | SyncedArray;
+		key: string | number;
+		state: State;
+	}) {
+		super(opts);
+		this.validator = opts.validator;
 		this.setValue(this.rawValue);
 	}
 }

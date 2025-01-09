@@ -1,4 +1,4 @@
-import { BaseValidator, isValidNullOrUndefined } from './base.js';
+import { isValidNullOrUndefined } from './base.js';
 export class ObjectValidator {
     $schema;
     constructor(shape) {
@@ -11,15 +11,18 @@ export class ObjectValidator {
     }
     isValidNullOrUndefined = isValidNullOrUndefined.bind(this);
     isValid = (value) => {
-        if (!this.isValidNullOrUndefined(value)) {
-            return false;
+        if (value === null) {
+            return this.$schema.nullable;
         }
-        return Object.entries(value).every(([key, value]) => {
-            const validator = this.$schema.shape[key];
-            if (!validator)
-                return false;
-            return validator.isValid(value);
-        });
+        if (value === undefined) {
+            return this.$schema.optional;
+        }
+        if (typeof value === 'object') {
+            return Object.entries(this.$schema.shape).every(([key, validator]) => {
+                return validator.isValid(value[key]);
+            });
+        }
+        return false;
     };
     optional() {
         this.$schema.optional = true;
@@ -29,22 +32,26 @@ export class ObjectValidator {
         this.$schema.nullable = true;
         return this;
     }
-    validate(value) {
-        if (typeof value !== 'object' || value === null)
-            return null;
-        let allValid = true;
-        const validValue = Object.entries(this.$schema.shape).reduce((acc, [key, validator]) => {
-            const parsedValue = validator.validate(value[key]);
-            const valid = (validator.$schema.optional && value[key] === undefined) ||
-                (validator.$schema.nullable && value[key] === null);
-            allValid = allValid && valid;
-            Object.assign(acc, { [key]: valid ? parsedValue : undefined });
-            return acc;
-        }, {});
-        console.log({ validValue, allValid });
-        return allValid ? validValue : null;
+    default(value) {
+        this.$schema.default = value;
+        return this;
     }
     coerce(value) {
-        return this.validate(value);
+        const isObject = typeof value === 'object' && value !== null;
+        if (!isObject) {
+            return null;
+        }
+        return Object.entries(this.$schema.shape).reduce((acc, [key, validator]) => {
+            Object.assign(acc, { [key]: validator.coerce(value[key]) });
+            return acc;
+        }, {});
+    }
+    parse(value) {
+        const coerced = this.coerce(value);
+        const isValid = this.isValid(value);
+        return {
+            isValid,
+            value: isValid ? coerced : null
+        };
     }
 }

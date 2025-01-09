@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import type { Validator } from './schemas/schema.js';
-import { NULL } from './constants.js';
+import { INITIALIZED, NULL } from './constants.js';
 import type { BaseValidator } from './schemas/base.js';
 import { DEV } from 'esm-env';
 
@@ -81,21 +81,34 @@ export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>(
 };
 
 export const getInstance = (validator: Validator): (new () => Y.AbstractType<any>) | null => {
-	if (validator) {
-		switch (validator.$schema.kind) {
-			case 'object':
-				return Y.Map;
-			case 'array':
-				return Y.Array;
-			default:
-				return Y.Text;
-		}
+	switch (validator.$schema.kind) {
+		case 'object':
+			return Y.Map;
+		case 'array':
+			return Y.Array;
+		default:
+			return Y.Text;
 	}
-	return null;
 };
 
 export const logError = (...args: any[]) => {
 	if (DEV) {
 		console.error(...args);
 	}
+};
+
+export const isInitialized = ({ yType }: { yType: Y.AbstractType<any> }) => {
+	// @ts-ignore
+	return yType.doc?.initialized;
+};
+
+// From https://github.com/YousefED/SyncedStore/blob/main/packages/core/src/array.ts
+export const propertyToNumber = (p: string | number | symbol) => {
+	if (typeof p === 'string' && p.trim().length) {
+		const asNum = Number(p);
+		if (Number.isInteger(asNum)) {
+			return asNum;
+		}
+	}
+	return p;
 };

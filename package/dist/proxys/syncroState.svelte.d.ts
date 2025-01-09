@@ -11,16 +11,19 @@ import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
 import { SyncedArray } from './array.svelte.js';
 export type SyncroStates = SyncedText | SyncedNumber | SyncedBoolean | SyncedDate | SyncedEnum | SyncedObject | SyncedArray;
-type StateExtras = {
-    $doc: Y.Doc;
-    $connected: boolean;
-    $state: Y.Map<any>;
-    $connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
-    $remotlySynced: boolean;
-    $locallySynced: boolean;
-    $undo: () => void;
-    $redo: () => void;
-    $awareness: Awareness;
+export type State<T extends 'object' | 'array' = 'object'> = {
+    remotlySynced: boolean;
+    locallySynced: boolean;
+    connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
+    awareness: Awareness;
+    doc: Y.Doc;
+    undoManager: Y.UndoManager;
+    transaction: (fn: () => void) => void;
+    transactionKey: any;
+    sharedType: Y.Map<any>;
+    sharedTypes: T extends 'object' ? Record<string, Y.AbstractType<any>> : Y.AbstractType<any>[];
+    undo: () => void;
+    redo: () => void;
 };
 export declare const syncroState: <T extends ObjectShape>({ schema, connect }: {
     schema: T;
@@ -28,12 +31,12 @@ export declare const syncroState: <T extends ObjectShape>({ schema, connect }: {
         doc: Y.Doc;
         awareness: Awareness;
     }) => Promise<void>;
-}) => SchemaOutput<T> & StateExtras;
-export declare const createSyncroState: ({ key, validator, parent, forceNewType, value }: {
-    parent: Y.Map<any> | Y.Array<any>;
+}) => SchemaOutput<T>;
+export declare const createSyncroState: ({ key, validator, forceNewType, value, parent, state }: {
     key: string | number;
     validator: Validator;
     value?: any;
     forceNewType?: boolean;
+    parent: SyncedObject | SyncedArray;
+    state: State;
 }) => SyncroStates;
-export {};
