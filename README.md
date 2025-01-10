@@ -218,7 +218,7 @@ Every syncrostate object or array has three additional methods: `getState`, `get
 - `getTypes` returns the YJS types children of the YObject or YArray.
 
 ```ts
-type State<T extends "object" | "array"> {
+type State {
   synced: boolean;
   awareness: Awareness;
   doc: Y.Doc;
