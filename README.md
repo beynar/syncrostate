@@ -183,7 +183,7 @@ const document = syncroState({
 ### Waiting for the state to be synced
 
 When you are using a remote provider, you might want to wait for the state to be synced before doing something.
-The syncrostate object has a `getState()` methods that return the state of the syncronisation from which you can get the `remotlySynced` property to check if the state is synced.
+The syncrostate object has a `getState()` methods that return the state of the syncronisation from which you can get the `synced` property to check if the state is synced.
 
 ```svelte
 {#if document.getState?.().synced}
