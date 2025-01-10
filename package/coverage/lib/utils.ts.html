@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">63.87% </span>
+                <span class="strong">68.05% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>99/155</span>
+                <span class='fraction'>98/144</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">88.63% </span>
+                <span class="strong">88.88% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>39/44</span>
+                <span class='fraction'>40/45</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">83.33% </span>
+                <span class="strong">90.9% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>10/12</span>
+                <span class='fraction'>10/11</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">63.87% </span>
+                <span class="strong">68.05% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>99/155</span>
+                <span class='fraction'>98/144</span>
             </div>
         
             
@@ -240,19 +240,7 @@
 <a name='L175'></a><a href='#L175'>175</a>
 <a name='L176'></a><a href='#L176'>176</a>
 <a name='L177'></a><a href='#L177'>177</a>
-<a name='L178'></a><a href='#L178'>178</a>
-<a name='L179'></a><a href='#L179'>179</a>
-<a name='L180'></a><a href='#L180'>180</a>
-<a name='L181'></a><a href='#L181'>181</a>
-<a name='L182'></a><a href='#L182'>182</a>
-<a name='L183'></a><a href='#L183'>183</a>
-<a name='L184'></a><a href='#L184'>184</a>
-<a name='L185'></a><a href='#L185'>185</a>
-<a name='L186'></a><a href='#L186'>186</a>
-<a name='L187'></a><a href='#L187'>187</a>
-<a name='L188'></a><a href='#L188'>188</a>
-<a name='L189'></a><a href='#L189'>189</a>
-<a name='L190'></a><a href='#L190'>190</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L178'></a><a href='#L178'>178</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -323,7 +311,7 @@
 <span class="cline-any cline-yes">148x</span>
 <span class="cline-any cline-yes">148x</span>
 <span class="cline-any cline-yes">32x</span>
-<span class="cline-any cline-yes">116x</span>
+<span class="cline-any cline-yes">140x</span>
 <span class="cline-any cline-yes">116x</span>
 <span class="cline-any cline-yes">116x</span>
 <span class="cline-any cline-yes">116x</span>
@@ -374,18 +362,6 @@
 <span class="cline-any cline-yes">392x</span>
 <span class="cline-any cline-yes">232x</span>
 <span class="cline-any cline-yes">232x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">7x</span>
@@ -564,18 +540,6 @@ export const propertyToNumber = (p: string | number | symbol) =&gt; {
 	return p;
 };
 &nbsp;
-export const createYTypesArrayProxy = <span class="fstat-no" title="function not covered" >(yType: Y.Array&lt;any&gt;) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >	return new Proxy([], {</span>
-<span class="cstat-no" title="statement not covered" >		get: (_target, key) =&gt; {</span>
-<span class="cstat-no" title="statement not covered" >			const index = propertyToNumber(key);</span>
-<span class="cstat-no" title="statement not covered" >			if (typeof index === 'number' &amp;&amp; index &gt;= 0 &amp;&amp; index &lt; yType.length) {</span>
-<span class="cstat-no" title="statement not covered" >				return yType.get(index);</span>
-<span class="cstat-no" title="statement not covered" >			}</span>
-<span class="cstat-no" title="statement not covered" >			return undefined;</span>
-<span class="cstat-no" title="statement not covered" >		}</span>
-<span class="cstat-no" title="statement not covered" >	});</span>
-<span class="cstat-no" title="statement not covered" >};</span>
-&nbsp;
 export function setArrayToNull(this: SyncedArray | SyncedSet) {
 	this.isNull = true;
 	this.yType.delete(0, this.yType.length);
@@ -637,7 +601,7 @@ export function observeArray(this: SyncedArray | SyncedSet) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-01-10T20:44:08.074Z
+                at 2025-01-10T22:56:56.714Z
             </div>
         <script src="../prettify.js"></script>
         <script>

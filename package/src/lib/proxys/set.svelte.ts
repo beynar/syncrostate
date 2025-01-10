@@ -36,9 +36,6 @@ export class SyncedSet {
 	}
 
 	sync = (value: any) => {
-		const isSet = value instanceof Set;
-		const isArray = Array.isArray(value);
-		const arrayValue = isSet ? Array.from(value) : isArray ? value : null;
 		this.state.transaction(() => {
 			this.syncroStatesValues.clear();
 			this.syncroStates = [];

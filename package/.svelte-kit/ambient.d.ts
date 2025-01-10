@@ -194,7 +194,13 @@ declare module '$env/static/private' {
 	export const npm_package_sideEffects_0: string;
 	export const npm_package_devDependencies__liveblocks_client: string;
 	export const npm_node_execpath: string;
+	export const TEST: string;
+	export const VITEST: string;
 	export const NODE_ENV: string;
+	export const PROD: string;
+	export const DEV: string;
+	export const BASE_URL: string;
+	export const MODE: string;
 }
 
 /**
@@ -394,7 +400,13 @@ declare module '$env/dynamic/private' {
 		npm_package_sideEffects_0: string;
 		npm_package_devDependencies__liveblocks_client: string;
 		npm_node_execpath: string;
+		TEST: string;
+		VITEST: string;
 		NODE_ENV: string;
+		PROD: string;
+		DEV: string;
+		BASE_URL: string;
+		MODE: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}

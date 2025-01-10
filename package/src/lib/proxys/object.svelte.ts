@@ -140,23 +140,23 @@ export class SyncedObject {
 		this.proxy = new Proxy(
 			{},
 			{
-				get: (target: any, key: any) => {
-					if (key === 'getState') {
+				get: (target: any, prop: any) => {
+					if (prop === 'getState') {
 						return () => state;
 					}
-					if (key === 'getYType') {
+					if (prop === 'getYType') {
 						return () => yType;
 					}
 
-					if (key === 'getYTypes') {
+					if (prop === 'getYTypes') {
 						return () => Object.fromEntries(yType.entries());
 					}
 
-					if (key === 'toJSON') {
+					if (prop === 'toJSON') {
 						return this.toJSON();
 					}
 
-					const syncroState = this.syncroStates[key];
+					const syncroState = this.syncroStates[prop];
 
 					if (!syncroState) {
 						return undefined;
@@ -190,15 +190,15 @@ export class SyncedObject {
 
 				deleteProperty: this.deleteProperty,
 
-				has: (target: any, key: any) => {
-					if (typeof key !== 'string') {
+				has: (target: any, prop: any) => {
+					if (typeof prop !== 'string') {
 						return false;
 					}
-					return this.yType.has(key);
+					return this.yType.has(prop);
 				},
 
-				getOwnPropertyDescriptor(target: any, key: any) {
-					if ((typeof key === 'string' && yType.has(key)) || key === 'toJSON') {
+				getOwnPropertyDescriptor(target: any, prop: any) {
+					if ((typeof prop === 'string' && yType.has(prop)) || prop === 'toJSON') {
 						return {
 							enumerable: true,
 							configurable: true

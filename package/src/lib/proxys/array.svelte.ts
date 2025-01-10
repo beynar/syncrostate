@@ -120,17 +120,17 @@ export class SyncedArray<T extends any = any> {
 		yType.observe(this.observe);
 
 		this.proxy = new Proxy([], {
-			get: (target: any, pArg: any, receiver: any) => {
-				if (pArg === 'getState') {
+			get: (target: any, prop: any, receiver: any) => {
+				if (prop === 'getState') {
 					return () => state;
 				}
-				if (pArg === 'getYType') {
+				if (prop === 'getYType') {
 					return () => this.yType;
 				}
-				if (pArg === 'getYTypes') {
+				if (prop === 'getYTypes') {
 					return () => this.yType.toArray();
 				}
-				const p = propertyToNumber(pArg);
+				const p = propertyToNumber(prop);
 				if (Number.isInteger(p)) {
 					const syncroState = this.syncroStates[p as number];
 					if (!syncroState) {
@@ -162,8 +162,8 @@ export class SyncedArray<T extends any = any> {
 				return Reflect.get(target, p, receiver);
 			},
 
-			set: (target: any, pArg: any, value: any) => {
-				const p = propertyToNumber(pArg);
+			set: (target: any, prop: any, value: any) => {
+				const p = propertyToNumber(prop);
 				if (Number.isInteger(p)) {
 					if (value === undefined) {
 						return this.deleteProperty(target, p);
@@ -188,8 +188,8 @@ export class SyncedArray<T extends any = any> {
 				return true;
 			},
 			deleteProperty: this.deleteProperty,
-			has: (target, pArg) => {
-				const p = propertyToNumber(pArg);
+			has: (target, prop) => {
+				const p = propertyToNumber(prop);
 				if (typeof p !== 'number') {
 					// forward to arrayimplementation
 					return Reflect.has(target, p);
@@ -201,8 +201,8 @@ export class SyncedArray<T extends any = any> {
 				}
 			},
 
-			getOwnPropertyDescriptor: (target, pArg) => {
-				const p = propertyToNumber(pArg);
+			getOwnPropertyDescriptor: (target, prop) => {
+				const p = propertyToNumber(prop);
 				if (p === 'length') {
 					return {
 						enumerable: false,
