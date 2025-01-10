@@ -151,6 +151,34 @@ This architecture ensures that:
 
 ## Things to notice
 
+### Adding persistence and remote provider
+
+To add a persistence provider like y-indexeddb and use a remote provider like Liveblocks or y-websocket you will do something like this:
+
+```ts
+import { IndexeddbPersistence } from "y-indexeddb";
+import { createClient } from "@liveblocks/client";
+import { LiveblocksYjsProvider } from "@liveblocks/yjs";
+
+const document = syncroState({
+  sync: ({ doc, synced }) => {
+    const docName = "your-doc-name";
+    const localProvider = new IndexeddbPersistence(docName, doc);
+    const remoteClient = createClient({
+      publicApiKey: "your-api-key"
+    });
+    const { room } = remoteClient.enterRoom(docName);
+    localProvider.on("synced", () => {
+      const remoteProvider = new LiveblocksYjsProvider(room, doc);
+      remoteProvider.on("synced", () => {
+        synced();
+      });
+    });
+  }
+  // ... your schema
+});
+```
+
 ### Editing multiple object properties at once
 
 If you want to edit multiple object properties at once it's preferable to reassign the entire object.
@@ -158,11 +186,11 @@ This way, syncrostate can apply the changes inside a single transaction and avoi
 Only the properties that are being changed will trigger reactivity and remote updates.
 
 ```js
-// Instead of
+// Instead of this
 state.user.name = "John";
 state.user.age = 30;
 
-// Good
+// Do this
 state.user = {
   ...state.user,
   name: "John",
