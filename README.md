@@ -15,10 +15,11 @@ Inspired by [Syncedstore](https://github.com/yousefed/SyncedStore), SyncroState 
 ## Features
 
 - 🚀 **Powered by Yjs** - Industry-leading CRDT for conflict-free real-time collaboration
-- 🔒 **Type-Safe** - Full TypeScript support with rich type inference
-- 💫 **Svelte Native** - Works like regular Svelte state with fine-grained reactivity
+- 🔒 **Type-Safe** - Full TypeScript support with rich type inference and schema validation
+- 💫 **Svelte DX** - Works like regular Svelte state with fine-grained reactivity and simple mutations
 - 🎯 **Rich Data Types** - Support for primitives, arrays, objects, dates, enums, and sets.
 - 🔌 **Provider Agnostic** - Works with Liveblocks, PartyKit, or any Yjs provider
+- 📚 **Local Persistence ready** - Support for y-indexeddb and y-websocket for offline use
 - ↩️ **Undo/Redo** - Built-in support for state history
 - 🎮 **Bindable** - Use `bind:value` like you would with any Svelte state
 - 🎨 **Optional & Nullable** - Flexible schema definition with optional and nullable fields
@@ -240,6 +241,7 @@ SyncroState uses Yjs's undo/redo system to provide undo/redo functionality. Thes
 - [ ] Find a way to make syncrostate schema optional
 - [ ] Add support for recursive types
 - [ ] Add support for nested documents
+- [ ] Add a simple way to manage awareness sharing
 
 ## License
 
