@@ -121,18 +121,6 @@ export const propertyToNumber = (p: string | number | symbol) => {
 	return p;
 };
 
-export const createYTypesArrayProxy = (yType: Y.Array<any>) => {
-	return new Proxy([], {
-		get: (_target, key) => {
-			const index = propertyToNumber(key);
-			if (typeof index === 'number' && index >= 0 && index < yType.length) {
-				return yType.get(index);
-			}
-			return undefined;
-		}
-	});
-};
-
 export function setArrayToNull(this: SyncedArray | SyncedSet) {
 	this.isNull = true;
 	this.yType.delete(0, this.yType.length);

@@ -26,12 +26,12 @@
 		};
 	});
 	const document = syncroState({
-		sync: async ({ doc, synced }) => {
-			const yProvider = new LiveblocksYjsProvider(room, doc);
-			yProvider.on('synced', () => {
-				synced();
-			});
-		},
+		// sync: async ({ doc, synced }) => {
+		// 	const yProvider = new LiveblocksYjsProvider(room, doc);
+		// 	yProvider.on('synced', () => {
+		// 		synced();
+		// 	});
+		// },
 		schema: {
 			name: y.string().default('Bob').optional(),
 			firstName: y.string().default('Smith'),
@@ -138,10 +138,18 @@
 	}
 
 	const logNestedState = () => {
+		const t = document.getYTypes!().age;
 		console.log({
-			state: document.family.getState?.(),
-			yType: document.family.getYType?.(),
-			yTypes: document.family.getYTypes?.()
+			family: {
+				state: document.family.getState?.(),
+				yType: document.family.getYType?.(),
+				yTypes: document.family.getYTypes?.()
+			},
+			document: {
+				state: document.getState?.(),
+				yType: document.getYType?.(),
+				yTypes: document.getYTypes?.()
+			}
 		});
 	};
 

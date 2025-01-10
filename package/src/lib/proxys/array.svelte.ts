@@ -3,14 +3,7 @@ import type { ArrayValidator } from '../schemas/array.js';
 import { createSyncroState, type State, type SyncroStates } from './syncroState.svelte.js';
 import type { SyncedContainer } from './common.js';
 
-import {
-	createYTypesArrayProxy,
-	isArrayNull,
-	logError,
-	observeArray,
-	propertyToNumber,
-	setArrayToNull
-} from '../utils.js';
+import { isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
 
 export class SyncedArray<T extends any = any> {
 	state: State;
@@ -131,11 +124,11 @@ export class SyncedArray<T extends any = any> {
 				if (pArg === 'getState') {
 					return () => state;
 				}
-				if (pArg === 'getType') {
+				if (pArg === 'getYType') {
 					return () => this.yType;
 				}
-				if (pArg === 'getTypes') {
-					return () => createYTypesArrayProxy(this.yType);
+				if (pArg === 'getYTypes') {
+					return () => this.yType.toArray();
 				}
 				const p = propertyToNumber(pArg);
 				if (Number.isInteger(p)) {

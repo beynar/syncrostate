@@ -144,12 +144,12 @@ export class SyncedObject {
 					if (key === 'getState') {
 						return () => state;
 					}
-					if (key === 'getType') {
+					if (key === 'getYType') {
 						return () => yType;
 					}
 
-					if (key === 'getTypes') {
-						return () => createYTypesObjectProxy(yType);
+					if (key === 'getYTypes') {
+						return () => Object.fromEntries(yType.entries());
 					}
 
 					if (key === 'toJSON') {

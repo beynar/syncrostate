@@ -1,14 +1,7 @@
 import * as Y from 'yjs';
 import { SvelteSet } from 'svelte/reactivity';
 
-import {
-	createYTypesArrayProxy,
-	isArrayNull,
-	logError,
-	observeArray,
-	propertyToNumber,
-	setArrayToNull
-} from '../utils.js';
+import { isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
 import { createSyncroState, type State, type SyncroStates } from './syncroState.svelte.js';
 import type { SyncedContainer } from './common.js';
 import type { SetValidator } from '$lib/schemas/set.js';
@@ -117,11 +110,11 @@ export class SyncedSet {
 			if (prop === 'getState') {
 				return () => this.state;
 			}
-			if (prop === 'getType') {
+			if (prop === 'getYType') {
 				return () => this.yType;
 			}
-			if (prop === 'getTypes') {
-				return () => new Set(createYTypesArrayProxy(this.yType));
+			if (prop === 'getYTypes') {
+				return () => this.yType.toArray();
 			}
 			if (prop === Symbol.iterator) {
 				return () => this.syncroStatesValues.values();
