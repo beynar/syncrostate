@@ -212,7 +212,7 @@ state.user = {
 
 ### Accessing the underlying Yjs document and shared types
 
-Every syncrostate object or array has three additional methods: `getState`, `getTypes` and `getYTypes`.
+Every syncrostate object or array has three additional methods: `getState`, `getYTypes` and `getYTypes`.
 
 - `getState` returns the state `type State` of the syncronisation.
 - `getYTypes` returns the underlying YObject or YArray.
