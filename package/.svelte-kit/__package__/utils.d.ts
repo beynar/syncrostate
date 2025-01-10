@@ -21,7 +21,6 @@ export declare const isInitialized: ({ yType }: {
     yType: Y.AbstractType<any>;
 }) => any;
 export declare const propertyToNumber: (p: string | number | symbol) => string | number | symbol;
-export declare const createYTypesArrayProxy: (yType: Y.Array<any>) => never[];
 export declare function setArrayToNull(this: SyncedArray | SyncedSet): void;
 export declare const isArrayNull: ({ yType }: {
     yType: Y.Array<any>;

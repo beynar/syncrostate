@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import { createSyncroState } from './syncroState.svelte.js';
-import { createYTypesArrayProxy, isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
+import { isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
 export class SyncedArray {
     state;
     validator;
@@ -98,17 +98,17 @@ export class SyncedArray {
         this.state = state;
         yType.observe(this.observe);
         this.proxy = new Proxy([], {
-            get: (target, pArg, receiver) => {
-                if (pArg === 'getState') {
+            get: (target, prop, receiver) => {
+                if (prop === 'getState') {
                     return () => state;
                 }
-                if (pArg === 'getType') {
+                if (prop === 'getYType') {
                     return () => this.yType;
                 }
-                if (pArg === 'getTypes') {
-                    return () => createYTypesArrayProxy(this.yType);
+                if (prop === 'getYTypes') {
+                    return () => this.yType.toArray();
                 }
-                const p = propertyToNumber(pArg);
+                const p = propertyToNumber(prop);
                 if (Number.isInteger(p)) {
                     const syncroState = this.syncroStates[p];
                     if (!syncroState) {
@@ -139,8 +139,8 @@ export class SyncedArray {
                 }
                 return Reflect.get(target, p, receiver);
             },
-            set: (target, pArg, value) => {
-                const p = propertyToNumber(pArg);
+            set: (target, prop, value) => {
+                const p = propertyToNumber(prop);
                 if (Number.isInteger(p)) {
                     if (value === undefined) {
                         return this.deleteProperty(target, p);
@@ -164,8 +164,8 @@ export class SyncedArray {
                 return true;
             },
             deleteProperty: this.deleteProperty,
-            has: (target, pArg) => {
-                const p = propertyToNumber(pArg);
+            has: (target, prop) => {
+                const p = propertyToNumber(prop);
                 if (typeof p !== 'number') {
                     // forward to arrayimplementation
                     return Reflect.has(target, p);
@@ -177,8 +177,8 @@ export class SyncedArray {
                     return false;
                 }
             },
-            getOwnPropertyDescriptor: (target, pArg) => {
-                const p = propertyToNumber(pArg);
+            getOwnPropertyDescriptor: (target, prop) => {
+                const p = propertyToNumber(prop);
                 if (p === 'length') {
                     return {
                         enumerable: false,

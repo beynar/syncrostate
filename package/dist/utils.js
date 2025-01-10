@@ -85,17 +85,6 @@ export const propertyToNumber = (p) => {
     }
     return p;
 };
-export const createYTypesArrayProxy = (yType) => {
-    return new Proxy([], {
-        get: (_target, key) => {
-            const index = propertyToNumber(key);
-            if (typeof index === 'number' && index >= 0 && index < yType.length) {
-                return yType.get(index);
-            }
-            return undefined;
-        }
-    });
-};
 export function setArrayToNull() {
     this.isNull = true;
     this.yType.delete(0, this.yType.length);

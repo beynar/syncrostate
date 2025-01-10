@@ -107,20 +107,20 @@ export class SyncedObject {
         this.baseImplementation = baseImplementation;
         const shape = this.validator.$schema.shape;
         this.proxy = new Proxy({}, {
-            get: (target, key) => {
-                if (key === 'getState') {
+            get: (target, prop) => {
+                if (prop === 'getState') {
                     return () => state;
                 }
-                if (key === 'getType') {
+                if (prop === 'getYType') {
                     return () => yType;
                 }
-                if (key === 'getTypes') {
-                    return () => createYTypesObjectProxy(yType);
+                if (prop === 'getYTypes') {
+                    return () => Object.fromEntries(yType.entries());
                 }
-                if (key === 'toJSON') {
+                if (prop === 'toJSON') {
                     return this.toJSON();
                 }
-                const syncroState = this.syncroStates[key];
+                const syncroState = this.syncroStates[prop];
                 if (!syncroState) {
                     return undefined;
                 }
@@ -151,14 +151,14 @@ export class SyncedObject {
                 return true;
             },
             deleteProperty: this.deleteProperty,
-            has: (target, key) => {
-                if (typeof key !== 'string') {
+            has: (target, prop) => {
+                if (typeof prop !== 'string') {
                     return false;
                 }
-                return this.yType.has(key);
+                return this.yType.has(prop);
             },
-            getOwnPropertyDescriptor(target, key) {
-                if ((typeof key === 'string' && yType.has(key)) || key === 'toJSON') {
+            getOwnPropertyDescriptor(target, prop) {
+                if ((typeof prop === 'string' && yType.has(prop)) || prop === 'toJSON') {
                     return {
                         enumerable: true,
                         configurable: true

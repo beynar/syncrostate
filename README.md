@@ -180,6 +180,17 @@ const document = syncroState({
 });
 ```
 
+### Waiting for the state to be synced
+
+When you are using a remote provider, you might want to wait for the state to be synced before doing something.
+The syncrostate object has a `getState()` methods that return the state of the syncronisation from which you can get the `remotlySynced` property to check if the state is synced.
+
+```svelte
+{#if document.getState?.().synced}
+	<div>My name is {document.name}</div>
+{/if}
+```
+
 ### Editing multiple object properties at once
 
 If you want to edit multiple object properties at once it's preferable to reassign the entire object.
@@ -197,17 +208,6 @@ state.user = {
   name: "John",
   age: 30
 };
-```
-
-### Waiting for the state to be synced
-
-When you are using a remote provider, you might want to wait for the state to be synced before doing something.
-The syncrostate object has a `getState()` methods that return the state of the syncronisation from which you can get the `remotlySynced` property to check if the state is synced.
-
-```svelte
-{#if document.getState?.().remotlySynced}
-	<div>My name is {document.name}</div>
-{/if}
 ```
 
 ### Accessing the underlying Yjs document and shared types
