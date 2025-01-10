@@ -216,7 +216,7 @@ Every syncrostate object or array has three additional methods: `getState`, `get
 
 - `getState` returns the state `type State` of the syncronisation.
 - `getYTypes` returns the underlying YObject or YArray.
-- `getTypes` returns the YJS types children of the YObject or YArray.
+- `getYTypes` returns the YJS types children of the YObject or YArray.
 
 ```ts
 type State {
