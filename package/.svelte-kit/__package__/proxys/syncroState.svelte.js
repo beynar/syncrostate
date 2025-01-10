@@ -11,6 +11,7 @@ import { getTypeFromParent, logError } from '../utils.js';
 import { onMount, setContext } from 'svelte';
 import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '../constants.js';
 import { SyncedArray } from './array.svelte.js';
+import { SyncedSet } from './set.svelte.js';
 // For testing purpose
 const safeSetContext = (key, value) => {
     try {
@@ -20,17 +21,15 @@ const safeSetContext = (key, value) => {
         //
     }
 };
-export const syncroState = ({ schema, connect }) => {
+export const syncroState = ({ schema, sync }) => {
     const doc = new Y.Doc();
     const awareness = new Awareness(doc);
     const schemaValidator = new ObjectValidator(schema);
     const stateMap = doc.getMap('$state');
     const undoManager = new Y.UndoManager(stateMap);
     let state = $state({
-        remotlySynced: connect ? false : true,
-        locallySynced: false,
+        synced: sync ? false : true,
         initialized: false,
-        connectionStatus: 'DISCONNECTED',
         awareness,
         doc,
         undoManager,
@@ -79,23 +78,21 @@ export const syncroState = ({ schema, connect }) => {
             text.insert(0, INITIALIZED);
         }
     };
-    if (!connect) {
+    const synced = () => {
         initialize(doc, () => {
             syncroStateProxy.sync(syncroStateProxy.value);
             stateMap.observe(syncroStateProxy.observe);
+            state.synced = true;
+        });
+    };
+    if (!sync) {
+        synced();
+    }
+    else {
+        onMount(() => {
+            sync({ doc, awareness, synced });
         });
     }
-    onMount(() => {
-        if (connect) {
-            connect({ doc, awareness }).then(() => {
-                initialize(doc, () => {
-                    syncroStateProxy.sync(syncroStateProxy.value);
-                    stateMap.observe(syncroStateProxy.observe);
-                    state.remotlySynced = true;
-                });
-            });
-        }
-    });
     return syncroStateProxy.value;
 };
 export const createSyncroState = ({ key, validator, forceNewType, value, parent, state }) => {
@@ -152,6 +149,16 @@ export const createSyncroState = ({ key, validator, forceNewType, value, parent,
                 yType: type,
                 validator: validator,
                 baseImplementation: {},
+                value,
+                parent,
+                key,
+                state
+            });
+        }
+        case 'set': {
+            return new SyncedSet({
+                yType: type,
+                validator: validator,
                 value,
                 parent,
                 key,

@@ -2,8 +2,7 @@ import * as Y from 'yjs';
 import type { DateValidator } from '../schemas/date.js';
 import { SvelteDate } from 'svelte/reactivity';
 import { BaseSyncedType } from './base.svelte.js';
-import type { SyncedArray } from './array.svelte.js';
-import type { SyncedObject } from './object.svelte.js';
+import type { SyncedContainer } from './common.js';
 import type { State } from './syncroState.svelte.js';
 export declare class SyncedDate extends BaseSyncedType {
     validator: DateValidator;
@@ -15,7 +14,7 @@ export declare class SyncedDate extends BaseSyncedType {
     constructor(opts: {
         yType: Y.Text;
         validator: DateValidator;
-        parent: SyncedObject | SyncedArray;
+        parent: SyncedContainer;
         key: string | number;
         state: State;
     });

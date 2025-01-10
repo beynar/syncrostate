@@ -10,11 +10,11 @@ import { SyncedBoolean } from './boolean.svelte.js';
 import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
 import { SyncedArray } from './array.svelte.js';
-export type SyncroStates = SyncedText | SyncedNumber | SyncedBoolean | SyncedDate | SyncedEnum | SyncedObject | SyncedArray;
+import type { SyncedContainer } from './common.js';
+import { SyncedSet } from './set.svelte.js';
+export type SyncroStates = SyncedText | SyncedNumber | SyncedBoolean | SyncedDate | SyncedEnum | SyncedObject | SyncedArray | SyncedSet;
 export type State = {
-    remotlySynced: boolean;
-    locallySynced: boolean;
-    connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
+    synced: boolean;
     awareness: Awareness;
     doc: Y.Doc;
     undoManager: Y.UndoManager;
@@ -24,11 +24,12 @@ export type State = {
     undo: () => void;
     redo: () => void;
 };
-export declare const syncroState: <T extends ObjectShape>({ schema, connect }: {
+export declare const syncroState: <T extends ObjectShape>({ schema, sync }: {
     schema: T;
-    connect?: ({ doc, awareness }: {
+    sync?: ({ doc, awareness, synced }: {
         doc: Y.Doc;
         awareness: Awareness;
+        synced: () => void;
     }) => Promise<void>;
 }) => SchemaOutput<T>;
 export declare const createSyncroState: ({ key, validator, forceNewType, value, parent, state }: {
@@ -36,6 +37,6 @@ export declare const createSyncroState: ({ key, validator, forceNewType, value, 
     validator: Validator;
     value?: any;
     forceNewType?: boolean;
-    parent: SyncedObject | SyncedArray;
+    parent: SyncedContainer;
     state: State;
 }) => SyncroStates;

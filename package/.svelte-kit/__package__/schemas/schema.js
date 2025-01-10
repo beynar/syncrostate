@@ -7,6 +7,7 @@ import { StringValidator } from './string.js';
 import { ObjectValidator } from './object.js';
 import { RichTextValidator } from './richtext.js';
 import { NumberValidator } from './number.js';
+import { SetValidator } from './set.js';
 export const y = {
     boolean: () => new BooleanValidator(),
     date: () => new DateValidator(),
@@ -15,5 +16,6 @@ export const y = {
     richText: () => new RichTextValidator(),
     object: (shape) => new ObjectValidator(shape),
     array: (shape) => new ArrayValidator(shape),
-    number: () => new NumberValidator()
+    number: () => new NumberValidator(),
+    set: (shape) => new SetValidator(shape)
 };

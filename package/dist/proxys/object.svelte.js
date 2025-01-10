@@ -1,9 +1,8 @@
 import * as Y from 'yjs';
-import { isInitialized, isMissingOptionnal } from '../utils.js';
+import { isMissingOptionnal } from '../utils.js';
 import { createSyncroState } from './syncroState.svelte.js';
-import { SyncedArray } from './array.svelte.js';
 import { logError } from '../utils.js';
-import { NULL_OBJECT, STATE_SYMBOL } from '../constants.js';
+import { NULL_OBJECT } from '../constants.js';
 const createYTypesObjectProxy = (yType) => {
     return new Proxy({}, {
         get: (target, key) => {
@@ -23,7 +22,6 @@ export class SyncedObject {
     proxy;
     parent;
     key;
-    initialized = false;
     isNull = $state(false);
     deleteProperty = (target, p) => {
         if (typeof p !== 'string') {
@@ -107,7 +105,6 @@ export class SyncedObject {
         this.validator = validator;
         this.yType = yType;
         this.baseImplementation = baseImplementation;
-        this.initialized = isInitialized(this);
         const shape = this.validator.$schema.shape;
         this.proxy = new Proxy({}, {
             get: (target, key) => {

@@ -43,9 +43,7 @@ const safeSetContext = (key: string, value: any) => {
 };
 
 export type State = {
-	remotlySynced: boolean;
-	locallySynced: boolean;
-	connectionStatus: 'CONNECTED' | 'DISCONNECTED' | 'CONNECTING';
+	synced: boolean;
 	awareness: Awareness;
 	doc: Y.Doc;
 	undoManager: Y.UndoManager;
@@ -58,10 +56,18 @@ export type State = {
 
 export const syncroState = <T extends ObjectShape>({
 	schema,
-	connect
+	sync
 }: {
 	schema: T;
-	connect?: ({ doc, awareness }: { doc: Y.Doc; awareness: Awareness }) => Promise<void>;
+	sync?: ({
+		doc,
+		awareness,
+		synced
+	}: {
+		doc: Y.Doc;
+		awareness: Awareness;
+		synced: () => void;
+	}) => Promise<void>;
 }): SchemaOutput<T> => {
 	const doc = new Y.Doc();
 	const awareness = new Awareness(doc);
@@ -70,10 +76,8 @@ export const syncroState = <T extends ObjectShape>({
 	const undoManager = new Y.UndoManager(stateMap);
 
 	let state = $state<State>({
-		remotlySynced: connect ? false : true,
-		locallySynced: false,
+		synced: sync ? false : true,
 		initialized: false,
-		connectionStatus: 'DISCONNECTED',
 		awareness,
 		doc,
 		undoManager,
@@ -126,25 +130,20 @@ export const syncroState = <T extends ObjectShape>({
 		}
 	};
 
-	if (!connect) {
+	const synced = () => {
 		initialize(doc, () => {
 			syncroStateProxy.sync(syncroStateProxy.value);
 			stateMap.observe(syncroStateProxy.observe);
+			state.synced = true;
+		});
+	};
+	if (!sync) {
+		synced();
+	} else {
+		onMount(() => {
+			sync({ doc, awareness, synced });
 		});
 	}
-
-	onMount(() => {
-		if (connect) {
-			connect({ doc, awareness }).then(() => {
-				initialize(doc, () => {
-					syncroStateProxy.sync(syncroStateProxy.value);
-					stateMap.observe(syncroStateProxy.observe);
-
-					state.remotlySynced = true;
-				});
-			});
-		}
-	});
 
 	return syncroStateProxy.value;
 };

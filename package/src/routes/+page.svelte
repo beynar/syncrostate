@@ -4,7 +4,6 @@
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.css';
 	import javascript from 'highlight.js/lib/languages/json';
-	import { getSyncroState } from '$lib/index.js';
 	import { LiveblocksYjsProvider } from '@liveblocks/yjs';
 	import { createClient } from '@liveblocks/client';
 	import { onMount } from 'svelte';
@@ -27,12 +26,10 @@
 		};
 	});
 	const document = syncroState({
-		connect: async ({ doc }) => {
-			return new Promise((resolve, reject) => {
-				const yProvider = new LiveblocksYjsProvider(room, doc);
-				yProvider.on('synced', () => {
-					resolve();
-				});
+		sync: async ({ doc, synced }) => {
+			const yProvider = new LiveblocksYjsProvider(room, doc);
+			yProvider.on('synced', () => {
+				synced();
 			});
 		},
 		schema: {
@@ -141,13 +138,17 @@
 	}
 
 	const logNestedState = () => {
-		const state = getSyncroState(document.family);
+		console.log({
+			state: document.family.getState?.(),
+			yType: document.family.getYType?.(),
+			yTypes: document.family.getYTypes?.()
+		});
 	};
 
 	const json = $derived(JSON.stringify(document, null, 2));
 </script>
 
-{#if document.getState().remotlySynced}
+{#if document.getState?.().synced}
 	<div class="grid grid-cols-2 gap-2 p-10">
 		<div class="flex flex-col gap-4">
 			<div class="flex flex-col gap-2">

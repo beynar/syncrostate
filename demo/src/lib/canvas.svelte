@@ -61,12 +61,10 @@
 	});
 
 	const document = syncroState({
-		connect: async ({ doc }) => {
-			return new Promise((resolve, reject) => {
-				const yProvider = new LiveblocksYjsProvider(room, doc);
-				yProvider.on('synced', () => {
-					resolve();
-				});
+		sync: async ({ doc, synced }) => {
+			const yProvider = new LiveblocksYjsProvider(room, doc);
+			yProvider.on('synced', () => {
+				synced();
 			});
 		},
 		schema: {
@@ -84,7 +82,7 @@
 	let stageWidth = $state(0);
 </script>
 
-{#if document.getState?.().remotlySynced}
+{#if document.getState?.().synced}
 	<div
 		bind:clientWidth={stageWidth}
 		role="presentation"

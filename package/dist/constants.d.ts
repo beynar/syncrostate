@@ -6,4 +6,3 @@ export declare const CONTEXT_KEY = "SYNCED_STATE_CONTEXT";
 export declare const TRANSACTION_KEY: {
     new (): {};
 };
-export declare const STATE_SYMBOL: unique symbol;

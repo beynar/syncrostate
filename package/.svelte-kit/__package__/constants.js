@@ -7,4 +7,3 @@ export const INITIALIZED = `$/_INITIALIZED_/$`;
 export const CONTEXT_KEY = 'SYNCED_STATE_CONTEXT';
 export const TRANSACTION_KEY = class Transaction {
 };
-export const STATE_SYMBOL = Symbol('$STATE');

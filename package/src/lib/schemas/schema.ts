@@ -46,8 +46,8 @@ export const y = {
 // Looking for a better solution.
 type Getters<T extends 'object' | 'array'> = {
 	getState?: () => State;
-	getTypes?: () => T extends 'array' ? YArray<any> : YMap<any>;
 	getYTypes?: () => T extends 'array' ? YArray<any> : YMap<any>;
+	getYType?: () => T extends 'array' ? YArray<any> : YMap<any>;
 };
 
 type NORO<N extends boolean, O extends boolean, T> = N extends true
@@ -66,7 +66,7 @@ type InferSchemaType<T> =
 			: T extends ArrayValidator<infer Shape>
 				? InferSchemaType<Shape>[] & Getters<'array'>
 				: T extends SetValidator<infer Shape, infer O, infer N>
-					? NORO<N, O, Set<InferSchemaType<Shape>>>
+					? NORO<N, O, Set<InferSchemaType<Shape>>> & Getters<'array'>
 					: never;
 
 export type SchemaOutput<T extends ObjectShape> = Simplify<{

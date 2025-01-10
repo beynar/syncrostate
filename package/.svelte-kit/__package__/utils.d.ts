@@ -1,5 +1,7 @@
 import * as Y from 'yjs';
 import type { Validator } from './schemas/schema.js';
+import type { SyncedArray } from './proxys/array.svelte.js';
+import { SyncedSet } from './proxys/set.svelte.js';
 export declare const isMissingOptionnal: ({ parent, key, validator }: {
     parent: Y.Map<any> | Y.Array<any>;
     key: string | number;
@@ -19,3 +21,9 @@ export declare const isInitialized: ({ yType }: {
     yType: Y.AbstractType<any>;
 }) => any;
 export declare const propertyToNumber: (p: string | number | symbol) => string | number | symbol;
+export declare const createYTypesArrayProxy: (yType: Y.Array<any>) => never[];
+export declare function setArrayToNull(this: SyncedArray | SyncedSet): void;
+export declare const isArrayNull: ({ yType }: {
+    yType: Y.Array<any>;
+}) => boolean;
+export declare function observeArray(this: SyncedArray | SyncedSet): (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;

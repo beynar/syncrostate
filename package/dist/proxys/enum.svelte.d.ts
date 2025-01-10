@@ -1,8 +1,7 @@
 import * as Y from 'yjs';
 import type { EnumValidator } from '../schemas/enum.js';
 import { BaseSyncedType } from './base.svelte.js';
-import type { SyncedObject } from './object.svelte.js';
-import type { SyncedArray } from './array.svelte.js';
+import type { SyncedContainer } from './common.js';
 import type { State } from './syncroState.svelte.js';
 export declare class SyncedEnum<T extends string | number = string | number> extends BaseSyncedType {
     validator: EnumValidator<T, false, false>;
@@ -12,7 +11,7 @@ export declare class SyncedEnum<T extends string | number = string | number> ext
     constructor(opts: {
         yType: Y.Text;
         validator: EnumValidator<T>;
-        parent: SyncedObject | SyncedArray;
+        parent: SyncedContainer;
         key: string | number;
         state: State;
     });

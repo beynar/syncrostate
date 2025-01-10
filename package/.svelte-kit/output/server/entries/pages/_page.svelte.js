@@ -13,6 +13,213 @@ const INITIALIZED = `$/_INITIALIZED_/$`;
 const CONTEXT_KEY = "SYNCED_STATE_CONTEXT";
 const TRANSACTION_KEY = class Transaction {
 };
+const SvelteDate = globalThis.Date;
+const SvelteSet = globalThis.Set;
+class SyncedSet {
+  state;
+  validator;
+  yType;
+  parent;
+  key;
+  isNull = false;
+  syncroStates = [];
+  syncroStatesValues = new SvelteSet();
+  setNull = setArrayToNull.bind(this);
+  observe = observeArray.bind(this);
+  constructor(opts) {
+    this.key = opts.key;
+    this.state = opts.state;
+    this.yType = opts.yType;
+    this.parent = opts.parent;
+    this.validator = opts.validator;
+    this.sync(opts.value);
+    this.yType.observe(this.observe);
+  }
+  sync = (value) => {
+    const isSet = value instanceof Set;
+    const isArray = Array.isArray(value);
+    isSet ? Array.from(value) : isArray ? value : null;
+    this.state.transaction(() => {
+      this.syncroStatesValues.clear();
+      this.syncroStates = [];
+      if (isArrayNull(this)) {
+        this.isNull = true;
+        return;
+      }
+      if (this.state.initialized || value) {
+        for (let i = 0; i < Math.max(value?.length || 0, this.yType.length); i++) {
+          this.addState(createSyncroState({
+            key: i,
+            validator: this.validator.$schema.shape,
+            parent: this,
+            value: value?.[i],
+            state: this.state
+          }));
+        }
+      } else {
+        if (this.validator.$schema.default) {
+          this.syncroStates = Array.from(this.validator.$schema.default).map((item, index) => {
+            const state = createSyncroState({
+              key: index,
+              validator: this.validator.$schema.shape,
+              parent: this,
+              value: item,
+              state: this.state
+            });
+            this.syncroStatesValues.add(state.value);
+            return state;
+          });
+        } else if (this.validator.$schema.nullable && !value) {
+          this.setNull();
+        }
+      }
+    });
+  };
+  toJSON = () => {
+    return Array.from(this.syncroStates).map((state) => state.value);
+  };
+  addState = (state) => {
+    this.syncroStates.push(state);
+    this.syncroStatesValues.add(state.value);
+  };
+  deleteProperty = (target, prop) => {
+    const index = propertyToNumber(prop);
+    if (typeof index !== "number" || !this.syncroStates[index]) {
+      return true;
+    }
+    this.syncroStatesValues.delete(this.syncroStates[index].value);
+    this.syncroStates[index].destroy();
+    this.syncroStates.splice(index, 1);
+    this.yType.delete(index, 1);
+  };
+  destroy = () => {
+    this.syncroStatesValues.clear();
+    this.syncroStates = [];
+  };
+  proxySet = new Proxy(this.syncroStatesValues, {
+    get: (target, prop) => {
+      if (prop === "getState") {
+        return () => this.state;
+      }
+      if (prop === "getType") {
+        return () => this.yType;
+      }
+      if (prop === "getTypes") {
+        return () => new Set(createYTypesArrayProxy(this.yType));
+      }
+      if (prop === Symbol.iterator) {
+        return () => this.syncroStatesValues.values();
+      }
+      const result = Reflect.get(target, prop);
+      if (typeof result === "function") {
+        return (...args) => {
+          if (typeof prop === "string") {
+            switch (prop) {
+              case "add": {
+                const { isValid, value } = this.validator.$schema.shape.parse(args[0]);
+                if (!isValid) {
+                  return false;
+                }
+                const hasValue = this.syncroStatesValues.has(value);
+                if (hasValue) {
+                  return false;
+                }
+                this.state.transaction(() => {
+                  const state = createSyncroState({
+                    forceNewType: true,
+                    key: this.syncroStatesValues.size,
+                    validator: this.validator.$schema.shape,
+                    parent: this,
+                    value,
+                    state: this.state
+                  });
+                  this.addState(state);
+                });
+                return this.proxySet;
+              }
+              case "delete": {
+                const stateIndex = Array.from(this.syncroStates).findIndex((state) => state.value === args[0]);
+                if (stateIndex !== -1) {
+                  this.syncroStates[stateIndex].destroy();
+                }
+                this.deleteProperty(target, stateIndex);
+                return this.proxySet;
+              }
+              case "clear":
+                {
+                  this.state.transaction(() => {
+                    Array.from(this.syncroStates).forEach((state) => state.destroy());
+                    this.yType.delete(0, this.yType.length);
+                    this.syncroStatesValues.clear();
+                    this.syncroStates = [];
+                  });
+                }
+                return this.proxySet;
+            }
+            return result.call(target, ...args);
+          }
+        };
+      } else {
+        return result;
+      }
+    }
+  });
+  get value() {
+    if (this.isNull) {
+      return null;
+    }
+    return this.proxySet;
+  }
+  set value(input) {
+    const { isValid, value } = this.validator.parse(input);
+    console.log({ value, isValid });
+    if (!isValid) {
+      return;
+    } else {
+      if (!value) {
+        if (value === void 0) ;
+        else {
+          this.setNull();
+        }
+      } else {
+        this.syncroStatesValues.clear();
+        const valueArray = Array.from(value);
+        if (this.isNull) {
+          this.isNull = false;
+          this.yType.delete(0, this.yType.length);
+        }
+        if (!this.isNull) {
+          const remainingStates = Array.from(this.syncroStates).slice(valueArray.length);
+          remainingStates.forEach((state) => {
+            state.destroy();
+          });
+          if (remainingStates.length) {
+            this.yType.delete(valueArray.length, remainingStates.length);
+          }
+        }
+        this.syncroStates = valueArray.map((item, index) => {
+          const previsousState = this.syncroStates[index];
+          if (previsousState) {
+            previsousState.value = item;
+            this.syncroStatesValues.add(previsousState.value);
+            return previsousState;
+          } else {
+            const state = createSyncroState({
+              forceNewType: true,
+              key: index,
+              validator: this.validator.$schema.shape,
+              parent: this,
+              value: item,
+              state: this.state
+            });
+            this.syncroStatesValues.add(state.value);
+            return state;
+          }
+        });
+      }
+    }
+  }
+}
 const isMissingOptionnal = ({
   parent,
   key,
@@ -24,7 +231,7 @@ const isMissingOptionnal = ({
   return isMissingOptionnal2 && !hasDefault;
 };
 const getInitialStringifiedValue = (value, validator) => {
-  if (validator.$schema.kind === "array" || validator.$schema.kind === "object") {
+  if (validator.$schema.kind === "array" || validator.$schema.kind === "object" || validator.$schema.kind === "set") {
     return void 0;
   }
   const DEFAULT_VALUE = value === null ? null : value ?? validator.$schema.default;
@@ -75,14 +282,12 @@ const getInstance = (validator) => {
   switch (validator.$schema.kind) {
     case "object":
       return Y.Map;
+    case "set":
     case "array":
       return Y.Array;
     default:
       return Y.Text;
   }
-};
-const isInitialized = ({ yType }) => {
-  return yType.doc?.initialized;
 };
 const propertyToNumber = (p) => {
   if (typeof p === "string" && p.trim().length) {
@@ -104,250 +309,16 @@ const createYTypesArrayProxy = (yType) => {
     }
   });
 };
-class SyncedArray {
-  state;
-  validator;
-  yType;
-  parent;
-  key;
-  syncroStates = [];
-  proxy;
-  initialized = false;
-  isNull = false;
-  // array: any[] = $state(this.syncroStates.map((state) => state.value));
-  //🚨 Using a derived would be preferable but it breaks the tests :/
-  // private array = $derived(this.syncroStates.map((state) => state.value));
-  get array() {
-    return this.syncroStates.map((state) => state.value);
-  }
-  deleteProperty = (target, pArg) => {
-    const p = propertyToNumber(pArg);
-    if (typeof p !== "number") {
-      return true;
-    }
-    if (!this.validator.$schema.shape.$schema.optional) {
-      return true;
-    }
-    const syncroState2 = this.syncroStates[p];
-    if (!syncroState2) {
-      return true;
-    }
-    syncroState2.value = void 0;
-    return true;
-  };
-  set value(input) {
-    const { isValid, value } = this.validator.parse(input);
-    if (!isValid) ;
-    else {
-      this.state.transaction(() => {
-        if (!value) {
-          if (value === void 0) {
-            this.parent.deleteProperty({}, this.key);
-          } else {
-            this.setNull();
-          }
-        } else {
-          if (this.isNull) {
-            this.isNull = false;
-            this.yType.delete(0, this.yType.length);
-          }
-          if (!this.isNull) {
-            const remainingStates = this.syncroStates.slice(value.length);
-            remainingStates.forEach((state) => {
-              state.destroy();
-            });
-            if (remainingStates.length) {
-              this.yType.delete(value.length, remainingStates.length);
-            }
-          }
-          this.syncroStates = value.map((item, index) => {
-            const previsousState = this.syncroStates[index];
-            if (previsousState) {
-              previsousState.value = item;
-              return previsousState;
-            } else {
-              return createSyncroState({
-                key: index,
-                forceNewType: true,
-                validator: this.validator.$schema.shape,
-                parent: this,
-                value: item,
-                state: this.state
-              });
-            }
-          });
-        }
-      });
-    }
-  }
-  get value() {
-    if (this.isNull) {
-      return null;
-    }
-    return this.proxy;
-  }
-  constructor({
-    validator,
-    yType,
-    value,
-    parent,
-    key,
-    state
-  }) {
-    this.validator = validator;
-    this.yType = yType;
-    this.parent = parent;
-    this.key = key;
-    this.initialized = isInitialized(this);
-    this.state = state;
-    yType.observe(this.observe);
-    const shape = this.validator.$schema.shape;
-    this.proxy = new Proxy([], {
-      get: (target, pArg, receiver) => {
-        if (pArg === "getState") {
-          return () => state;
-        }
-        if (pArg === "getType") {
-          return () => this.yType;
-        }
-        if (pArg === "getTypes") {
-          return () => createYTypesArrayProxy(this.yType);
-        }
-        const p = propertyToNumber(pArg);
-        if (Number.isInteger(p)) {
-          const syncroState2 = this.syncroStates[p];
-          if (!syncroState2) {
-            return void 0;
-          }
-          return syncroState2.value;
-        } else if (typeof p === "string") {
-          if (p in this.methods) {
-            return this.methods[p];
-          }
-          if (p[0] === "$") {
-            return Reflect.get(target, p);
-          }
-          if (p === "toJSON") {
-            return this.toJSON();
-          }
-          if (p === "length") {
-            return this.array.length;
-          }
-        } else if (p === Symbol.toStringTag) {
-          return "Array";
-        } else if (p === Symbol.iterator) {
-          const values = this.array.slice();
-          return Reflect.get(values, p);
-        }
-        return Reflect.get(target, p, receiver);
-      },
-      set: (target, pArg, value2) => {
-        const p = propertyToNumber(pArg);
-        if (Number.isInteger(p)) {
-          if (value2 === void 0) {
-            return this.deleteProperty(target, p);
-          }
-          const syncroState2 = this.syncroStates[p];
-          if (!syncroState2) {
-            this.state.transaction(() => {
-              this.syncroStates[p] = createSyncroState({
-                key: p,
-                validator: shape,
-                parent: this,
-                value: value2,
-                state: this.state
-              });
-            });
-          } else {
-            syncroState2.value = value2;
-          }
-        }
-        return true;
-      },
-      deleteProperty: this.deleteProperty,
-      has: (target, pArg) => {
-        const p = propertyToNumber(pArg);
-        if (typeof p !== "number") {
-          return Reflect.has(target, p);
-        }
-        if (p < this.array.lengthUntracked && p >= 0) {
-          return true;
-        } else {
-          return false;
-        }
-      },
-      getOwnPropertyDescriptor: (target, pArg) => {
-        const p = propertyToNumber(pArg);
-        if (p === "length") {
-          return {
-            enumerable: false,
-            configurable: false,
-            writable: true
-          };
-        }
-        if (typeof p === "number" && p >= 0 && p < this.yType.length) {
-          return {
-            enumerable: true,
-            configurable: true,
-            writable: true
-          };
-        }
-        return void 0;
-      },
-      ownKeys: (target) => {
-        const keys = [];
-        for (let i = 0; i < this.yType.length; i++) {
-          keys.push(i + "");
-        }
-        keys.push("length");
-        return keys;
-      }
-    });
-    this.sync(value);
-  }
-  toJSON = () => {
-    return this.array;
-  };
-  setNull = () => {
-    this.isNull = true;
-    this.yType.delete(0, this.yType.length);
-    this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
-  };
-  sync = (value) => {
-    this.state.transaction(() => {
-      this.syncroStates = [];
-      if (this.yType.length === 1 && this.yType.get(0) instanceof Y.Text && this.yType.get(0).toString() === NULL_ARRAY) {
-        this.isNull = true;
-        return;
-      }
-      if (this.state.initialized || value) {
-        for (let i = 0; i < Math.max(value?.length || 0, this.yType.length); i++) {
-          this.syncroStates[i] = createSyncroState({
-            key: i,
-            validator: this.validator.$schema.shape,
-            parent: this,
-            value: value?.[i] || this.validator.$schema.default?.[i],
-            state: this.state
-          });
-        }
-      } else {
-        if (this.validator.$schema.default) {
-          this.syncroStates = this.validator.$schema.default.map((item, index) => {
-            return createSyncroState({
-              key: index,
-              validator: this.validator.$schema.shape,
-              parent: this,
-              value: item,
-              state: this.state
-            });
-          });
-        } else if (this.validator.$schema.nullable && !value) {
-          this.setNull();
-        }
-      }
-    });
-  };
-  observe = (e, _transaction) => {
+function setArrayToNull() {
+  this.isNull = true;
+  this.yType.delete(0, this.yType.length);
+  this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+}
+const isArrayNull = ({ yType }) => {
+  return yType.length === 1 && yType.get(0) instanceof Y.Text && yType.get(0).toString() === NULL_ARRAY;
+};
+function observeArray() {
+  return (e, _transaction) => {
     if (_transaction.origin !== this.state.transactionKey) {
       let start = 0;
       e.delta.forEach(({ retain, delete: _delete, insert }) => {
@@ -367,145 +338,25 @@ class SyncedArray {
               this.isNull = true;
               return;
             }
-            this.syncroStates.splice(start, 0, createSyncroState({
-              key: start,
-              validator: this.validator.$schema.shape,
-              parent: this,
-              state: this.state
-            }));
+            this.syncroStates.splice(
+              start,
+              0,
+              createSyncroState({
+                key: start,
+                validator: this.validator.$schema.shape,
+                parent: this,
+                state: this.state
+              })
+            );
             start += 1;
           }
         }
       });
-    }
-  };
-  methods = {
-    slice: (start, end) => {
-      return this.array.slice(start, end);
-    },
-    toReversed: () => {
-      return this.array.toReversed();
-    },
-    forEach: (cb) => {
-      return this.array.forEach(cb);
-    },
-    every: (cb) => {
-      return this.array.every(cb);
-    },
-    filter: (cb) => {
-      return this.array.filter(cb);
-    },
-    find: (cb) => {
-      return this.array.find(cb);
-    },
-    findIndex: (cb) => {
-      return this.array.findIndex(cb);
-    },
-    some: (cb) => {
-      return this.array.some(cb);
-    },
-    includes: (value) => {
-      return this.array.includes(value);
-    },
-    map: (cb) => {
-      return this.array.map(cb);
-    },
-    reduce: (cb, initialValue) => {
-      return this.array.reduce(cb, initialValue);
-    },
-    indexOf: (value) => {
-      return this.array.indexOf(value);
-    },
-    at: (index) => {
-      return this.array.at(index)?.value;
-    },
-    //
-    // Mutatives methods
-    //
-    pop: () => {
-      if (!this.syncroStates.length) {
-        return void 0;
+      if (this instanceof SyncedSet) {
+        this.syncroStatesValues.clear();
+        this.syncroStatesValues.add(this.syncroStates.map((state) => state.value));
       }
-      const last = this.syncroStates.pop();
-      this.state.transaction(() => {
-        this.yType.delete(this.yType.length - 1, 1);
-        last?.destroy();
-      });
-      return last?.value;
-    },
-    shift: () => {
-      if (!this.syncroStates.length) {
-        return void 0;
-      }
-      const first = this.syncroStates.shift();
-      this.state.transaction(() => {
-        this.yType.delete(0, 1);
-        first?.destroy();
-      });
-      return first?.value;
-    },
-    unshift: (...items) => {
-      let result;
-      this.state.transaction(() => {
-        result = this.syncroStates.unshift(...items.map((item, index) => {
-          return createSyncroState({
-            forceNewType: true,
-            key: index,
-            validator: this.validator.$schema.shape,
-            parent: this,
-            value: item,
-            state: this.state
-          });
-        }));
-      });
-      return result;
-    },
-    push: (...items) => {
-      this.state.transaction(() => {
-        this.syncroStates.push(...items.map((item, index) => {
-          return createSyncroState({
-            key: this.yType.length,
-            validator: this.validator.$schema.shape,
-            parent: this,
-            value: item,
-            state: this.state
-          });
-        }));
-      });
-    },
-    splice: (start, deleteCount, ..._items) => {
-      let result = [];
-      this.state.transaction(() => {
-        const newSyncroStates = _items.map((item, index) => {
-          this.yType.delete(start, deleteCount);
-          return createSyncroState({
-            key: start + index,
-            forceNewType: true,
-            validator: this.validator.$schema.shape,
-            parent: this,
-            value: item,
-            state: this.state
-          });
-        });
-        if (deleteCount) {
-          for (let i = 0; i < deleteCount; i++) {
-            const state = this.syncroStates[start + i];
-            if (state) {
-              state.destroy();
-            }
-          }
-        }
-        result = this.syncroStates.splice(start, deleteCount, ...newSyncroStates);
-      });
-      return result;
     }
-  };
-  destroy = () => {
-    this.syncroStates.forEach((state) => {
-      state.destroy();
-    });
-    this.syncroStates = [];
-    this.yType.unobserve(this.observe);
   };
 }
 const createYTypesObjectProxy = (yType) => {
@@ -527,7 +378,6 @@ class SyncedObject {
   proxy;
   parent;
   key;
-  initialized = false;
   isNull = false;
   deleteProperty = (target, p) => {
     if (typeof p !== "string") {
@@ -613,7 +463,6 @@ class SyncedObject {
     this.validator = validator;
     this.yType = yType;
     this.baseImplementation = baseImplementation;
-    this.initialized = isInitialized(this);
     const shape = this.validator.$schema.shape;
     this.proxy = new Proxy({}, {
       get: (target, key2) => {
@@ -914,7 +763,6 @@ class SyncedEnum extends BaseSyncedType {
     this.validator = opts.validator;
   }
 }
-const SvelteDate = globalThis.Date;
 const SvelteDateProxy = (onSet) => {
   const date = new SvelteDate();
   return new Proxy(date, {
@@ -1053,23 +901,387 @@ class SyncedNumber extends BaseSyncedType {
     this.validator = opts.validator;
   }
 }
+class SyncedArray {
+  state;
+  validator;
+  yType;
+  parent;
+  key;
+  syncroStates = [];
+  proxy;
+  isNull = false;
+  // array: any[] = $state(this.syncroStates.map((state) => state.value));
+  //🚨 Using a derived would be preferable but it breaks the tests :/
+  // private array = $derived(this.syncroStates.map((state) => state.value));
+  get array() {
+    return this.syncroStates.map((state) => state.value);
+  }
+  setNull = setArrayToNull.bind(this);
+  deleteProperty = (target, prop) => {
+    const index = propertyToNumber(prop);
+    if (typeof index !== "number") {
+      return true;
+    }
+    if (!this.validator.$schema.shape.$schema.optional) {
+      return true;
+    }
+    const syncroState2 = this.syncroStates[index];
+    if (!syncroState2) {
+      return true;
+    }
+    syncroState2.value = void 0;
+    return true;
+  };
+  set value(input) {
+    const { isValid, value } = this.validator.parse(input);
+    if (!isValid) ;
+    else {
+      this.state.transaction(() => {
+        if (!value) {
+          if (value === void 0) {
+            this.parent.deleteProperty({}, this.key);
+          } else {
+            this.setNull();
+          }
+        } else {
+          if (this.isNull) {
+            this.isNull = false;
+            this.yType.delete(0, this.yType.length);
+          }
+          if (!this.isNull) {
+            const remainingStates = this.syncroStates.slice(value.length);
+            remainingStates.forEach((state) => {
+              state.destroy();
+            });
+            if (remainingStates.length) {
+              this.yType.delete(value.length, remainingStates.length);
+            }
+          }
+          this.syncroStates = value.map((item, index) => {
+            const previsousState = this.syncroStates[index];
+            if (previsousState) {
+              previsousState.value = item;
+              return previsousState;
+            } else {
+              return createSyncroState({
+                key: index,
+                forceNewType: true,
+                validator: this.validator.$schema.shape,
+                parent: this,
+                value: item,
+                state: this.state
+              });
+            }
+          });
+        }
+      });
+    }
+  }
+  get value() {
+    if (this.isNull) {
+      return null;
+    }
+    return this.proxy;
+  }
+  constructor({
+    validator,
+    yType,
+    value,
+    parent,
+    key,
+    state
+  }) {
+    this.validator = validator;
+    this.yType = yType;
+    this.parent = parent;
+    this.key = key;
+    this.state = state;
+    yType.observe(this.observe);
+    this.proxy = new Proxy([], {
+      get: (target, pArg, receiver) => {
+        if (pArg === "getState") {
+          return () => state;
+        }
+        if (pArg === "getType") {
+          return () => this.yType;
+        }
+        if (pArg === "getTypes") {
+          return () => createYTypesArrayProxy(this.yType);
+        }
+        const p = propertyToNumber(pArg);
+        if (Number.isInteger(p)) {
+          const syncroState2 = this.syncroStates[p];
+          if (!syncroState2) {
+            return void 0;
+          }
+          return syncroState2.value;
+        } else if (typeof p === "string") {
+          if (p in this.methods) {
+            return this.methods[p];
+          }
+          if (p[0] === "$") {
+            return Reflect.get(target, p);
+          }
+          if (p === "toJSON") {
+            return this.toJSON();
+          }
+          if (p === "length") {
+            return this.array.length;
+          }
+        } else if (p === Symbol.toStringTag) {
+          return "Array";
+        } else if (p === Symbol.iterator) {
+          const values = this.array.slice();
+          return Reflect.get(values, p);
+        }
+        return Reflect.get(target, p, receiver);
+      },
+      set: (target, pArg, value2) => {
+        const p = propertyToNumber(pArg);
+        if (Number.isInteger(p)) {
+          if (value2 === void 0) {
+            return this.deleteProperty(target, p);
+          }
+          const syncroState2 = this.syncroStates[p];
+          if (!syncroState2) {
+            this.state.transaction(() => {
+              this.syncroStates[p] = createSyncroState({
+                key: p,
+                validator: this.validator.$schema.shape,
+                parent: this,
+                value: value2,
+                state: this.state
+              });
+            });
+          } else {
+            syncroState2.value = value2;
+          }
+        }
+        return true;
+      },
+      deleteProperty: this.deleteProperty,
+      has: (target, pArg) => {
+        const p = propertyToNumber(pArg);
+        if (typeof p !== "number") {
+          return Reflect.has(target, p);
+        }
+        if (p < this.array.lengthUntracked && p >= 0) {
+          return true;
+        } else {
+          return false;
+        }
+      },
+      getOwnPropertyDescriptor: (target, pArg) => {
+        const p = propertyToNumber(pArg);
+        if (p === "length") {
+          return {
+            enumerable: false,
+            configurable: false,
+            writable: true
+          };
+        }
+        if (typeof p === "number" && p >= 0 && p < this.yType.length) {
+          return {
+            enumerable: true,
+            configurable: true,
+            writable: true
+          };
+        }
+        return void 0;
+      },
+      ownKeys: (target) => {
+        const keys = [];
+        for (let i = 0; i < this.yType.length; i++) {
+          keys.push(i + "");
+        }
+        keys.push("length");
+        return keys;
+      }
+    });
+    this.sync(value);
+  }
+  toJSON = () => {
+    return this.array;
+  };
+  sync = (value) => {
+    this.state.transaction(() => {
+      this.syncroStates = [];
+      if (isArrayNull(this)) {
+        this.isNull = true;
+        return;
+      }
+      if (this.state.initialized || value) {
+        for (let i = 0; i < Math.max(value?.length || 0, this.yType.length); i++) {
+          this.syncroStates[i] = createSyncroState({
+            key: i,
+            validator: this.validator.$schema.shape,
+            parent: this,
+            value: value?.[i] || this.validator.$schema.default?.[i],
+            state: this.state
+          });
+        }
+      } else {
+        if (this.validator.$schema.default) {
+          this.syncroStates = this.validator.$schema.default.map((item, index) => {
+            return createSyncroState({
+              key: index,
+              validator: this.validator.$schema.shape,
+              parent: this,
+              value: item,
+              state: this.state
+            });
+          });
+        } else if (this.validator.$schema.nullable && !value) {
+          this.setNull();
+        }
+      }
+    });
+  };
+  observe = observeArray.bind(this);
+  methods = {
+    slice: (start, end) => {
+      return this.array.slice(start, end);
+    },
+    toReversed: () => {
+      return this.array.toReversed();
+    },
+    forEach: (cb) => {
+      return this.array.forEach(cb);
+    },
+    every: (cb) => {
+      return this.array.every(cb);
+    },
+    filter: (cb) => {
+      return this.array.filter(cb);
+    },
+    find: (cb) => {
+      return this.array.find(cb);
+    },
+    findIndex: (cb) => {
+      return this.array.findIndex(cb);
+    },
+    some: (cb) => {
+      return this.array.some(cb);
+    },
+    includes: (value) => {
+      return this.array.includes(value);
+    },
+    map: (cb) => {
+      return this.array.map(cb);
+    },
+    reduce: (cb, initialValue) => {
+      return this.array.reduce(cb, initialValue);
+    },
+    indexOf: (value) => {
+      return this.array.indexOf(value);
+    },
+    at: (index) => {
+      return this.array.at(index)?.value;
+    },
+    //
+    // Mutatives methods
+    //
+    pop: () => {
+      if (!this.syncroStates.length) {
+        return void 0;
+      }
+      const last = this.syncroStates.pop();
+      this.state.transaction(() => {
+        this.yType.delete(this.yType.length - 1, 1);
+        last?.destroy();
+      });
+      return last?.value;
+    },
+    shift: () => {
+      if (!this.syncroStates.length) {
+        return void 0;
+      }
+      const first = this.syncroStates.shift();
+      this.state.transaction(() => {
+        this.yType.delete(0, 1);
+        first?.destroy();
+      });
+      return first?.value;
+    },
+    unshift: (...items) => {
+      let result;
+      this.state.transaction(() => {
+        result = this.syncroStates.unshift(...items.map((item, index) => {
+          return createSyncroState({
+            forceNewType: true,
+            key: index,
+            validator: this.validator.$schema.shape,
+            parent: this,
+            value: item,
+            state: this.state
+          });
+        }));
+      });
+      return result;
+    },
+    push: (...items) => {
+      this.state.transaction(() => {
+        this.syncroStates.push(...items.map((item, index) => {
+          return createSyncroState({
+            key: this.yType.length,
+            validator: this.validator.$schema.shape,
+            parent: this,
+            value: item,
+            state: this.state
+          });
+        }));
+      });
+    },
+    splice: (start, deleteCount, ..._items) => {
+      let result = [];
+      this.state.transaction(() => {
+        const newSyncroStates = _items.map((item, index) => {
+          this.yType.delete(start, deleteCount);
+          return createSyncroState({
+            key: start + index,
+            forceNewType: true,
+            validator: this.validator.$schema.shape,
+            parent: this,
+            value: item,
+            state: this.state
+          });
+        });
+        if (deleteCount) {
+          for (let i = 0; i < deleteCount; i++) {
+            const state = this.syncroStates[start + i];
+            if (state) {
+              state.destroy();
+            }
+          }
+        }
+        result = this.syncroStates.splice(start, deleteCount, ...newSyncroStates);
+      });
+      return result;
+    }
+  };
+  destroy = () => {
+    this.syncroStates.forEach((state) => {
+      state.destroy();
+    });
+    this.syncroStates = [];
+    this.yType.unobserve(this.observe);
+  };
+}
 const safeSetContext = (key, value) => {
   try {
     setContext(key, value);
   } catch (e) {
   }
 };
-const syncroState = ({ schema, connect }) => {
+const syncroState = ({ schema, sync }) => {
   const doc = new Y.Doc();
   const awareness = new Awareness(doc);
   const schemaValidator = new ObjectValidator(schema);
   const stateMap = doc.getMap("$state");
   const undoManager = new Y.UndoManager(stateMap);
   let state = {
-    remotlySynced: connect ? false : true,
-    locallySynced: false,
+    synced: sync ? false : true,
     initialized: false,
-    connectionStatus: "DISCONNECTED",
     awareness,
     doc,
     undoManager,
@@ -1116,11 +1328,15 @@ const syncroState = ({ schema, connect }) => {
       text.insert(0, INITIALIZED);
     }
   };
-  if (!connect) {
+  const synced = () => {
     initialize(doc, () => {
       syncroStateProxy.sync(syncroStateProxy.value);
       stateMap.observe(syncroStateProxy.observe);
+      state.synced = true;
     });
+  };
+  if (!sync) {
+    synced();
   }
   return syncroStateProxy.value;
 };
@@ -1161,6 +1377,16 @@ const createSyncroState = ({
         yType: type,
         validator,
         baseImplementation: {},
+        value,
+        parent,
+        key,
+        state
+      });
+    }
+    case "set": {
+      return new SyncedSet({
+        yType: type,
+        validator,
         value,
         parent,
         key,
@@ -1548,6 +1774,64 @@ class NumberValidator extends BaseValidator {
     }
   };
 }
+class SetValidator {
+  $schema;
+  constructor(shape) {
+    this.$schema = {
+      kind: "set",
+      optional: false,
+      nullable: false,
+      shape
+    };
+  }
+  optional() {
+    this.$schema.optional = true;
+    return this;
+  }
+  nullable() {
+    this.$schema.nullable = true;
+    return this;
+  }
+  default(value) {
+    if (value instanceof Set) {
+      this.$schema.default = value;
+    } else {
+      this.$schema.default = new Set(value);
+    }
+    return this;
+  }
+  isValid = (value) => {
+    if (value instanceof Set) {
+      return Array.from(value).every((item) => this.$schema.shape.isValid(item));
+    }
+    if (value === null) {
+      return this.$schema.nullable;
+    }
+    if (value === void 0) {
+      return this.$schema.optional;
+    }
+    return false;
+  };
+  coerce(value) {
+    if (value instanceof Set) {
+      const validItems = Array.from(value).filter((item) => this.$schema.shape.isValid(item));
+      if (validItems.length > 0) {
+        return new Set(validItems);
+      }
+    }
+    if (value === null && this.$schema.nullable) {
+      return null;
+    }
+    return this.$schema.default || /* @__PURE__ */ new Set();
+  }
+  parse(value) {
+    const coerced = this.coerce(value);
+    return {
+      isValid: this.isValid(value),
+      value: coerced
+    };
+  }
+}
 const y = {
   boolean: () => new BooleanValidator(),
   date: () => new DateValidator(),
@@ -1556,22 +1840,21 @@ const y = {
   richText: () => new RichTextValidator(),
   object: (shape) => new ObjectValidator(shape),
   array: (shape) => new ArrayValidator(shape),
-  number: () => new NumberValidator()
+  number: () => new NumberValidator(),
+  set: (shape) => new SetValidator(shape)
 };
 function _page($$payload, $$props) {
   push();
   hljs.registerLanguage("javascript", javascript);
+  const client = createClient({
+    publicApiKey: "pk_prod_ytItHgLSil9pFkJELGPI7yWptk_jNMifKfv3JhWODRGX2vK3hrt-3oNzDkrc1kcx"
+  });
+  const { room } = client.enterRoom("your-room-id-10");
   const document = syncroState({
-    connect: async ({ doc }) => {
-      return new Promise((resolve, reject) => {
-        const client = createClient({
-          publicApiKey: "pk_prod_ytItHgLSil9pFkJELGPI7yWptk_jNMifKfv3JhWODRGX2vK3hrt-3oNzDkrc1kcx"
-        });
-        const { room } = client.enterRoom("your-room-id-10");
-        const yProvider = new LiveblocksYjsProvider(room, doc);
-        yProvider.on("synced", () => {
-          resolve();
-        });
+    sync: async ({ doc, synced }) => {
+      const yProvider = new LiveblocksYjsProvider(room, doc);
+      yProvider.on("synced", () => {
+        synced();
       });
     },
     schema: {
@@ -1596,7 +1879,7 @@ function _page($$payload, $$props) {
     }
   });
   JSON.stringify(document, null, 2);
-  if (document.getState().remotlySynced) {
+  if (document.getState?.().synced) {
     $$payload.out += "<!--[-->";
     $$payload.out += `<div class="grid grid-cols-2 gap-2 p-10"><div class="flex flex-col gap-4"><div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Basic Properties</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-primary">${escape_html(document.name)}</button> <button class="btn btn-primary">Update First Name</button> <button class="btn btn-secondary">Update Age</button> <button class="btn btn-secondary">Update Birthday</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Arrays</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-accent">Add Friend</button> <button class="btn btn-error">Remove Friend</button> <button class="btn btn-info">Add Family</button> <button class="btn btn-success">Add Todo</button> <button class="btn btn-warning">Toggle Last Todo</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Nested Objects</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-warning">Toggle Theme</button> <button class="btn btn-info">Update Bio</button> <button class="btn btn-accent">Toggle Notifications</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Utils</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-warning">Log nested $state</button></div></div></div> <div><div class="mockup-code p-2"><code><!---->`;
     {

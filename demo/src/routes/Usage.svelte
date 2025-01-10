@@ -19,7 +19,8 @@
 			<pre use:highlight>
 			{`
     <script>
-    import { createClient } from '@liveblocks/client';
+    // Import your Yjs provider
+	import { createClient } from '@liveblocks/client';
 	import { LiveblocksYjsProvider } from '@liveblocks/yjs';
 
     // Import syncroState and y (the schema builder)
@@ -27,18 +28,16 @@
 
     // Declare the syncroState
     const document = syncroState({
-    // Return a promise that resolves when the remote document is synced
-		connect: async ({ doc }) => {
+    // Connect to a Yjs provider and then call the synced callback when the document is synced
+		sync: async ({ doc, synced }) => {
             // Create a liveblocks client
             const client = createClient({
                 publicApiKey: ''
             });
-            const { room } = client.enterRoom('your-room-id-10');
-			return new Promise((resolve, reject) => {
-				const yProvider = new LiveblocksYjsProvider(room, doc);
-				yProvider.on('synced', () => {
-					resolve();
-				});
+            const { room } = client.enterRoom('room');
+			const yProvider = new LiveblocksYjsProvider(room, doc);
+			yProvider.on('synced', () => {
+				synced();
 			});
 		},
 		// Define the schema of the state

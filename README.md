@@ -17,7 +17,7 @@ Inspired by [Syncedstore](https://github.com/yousefed/SyncedStore), SyncroState 
 - 🚀 **Powered by Yjs** - Industry-leading CRDT for conflict-free real-time collaboration
 - 🔒 **Type-Safe** - Full TypeScript support with rich type inference
 - 💫 **Svelte Native** - Works like regular Svelte state with fine-grained reactivity
-- 🎯 **Rich Data Types** - Support for primitives, arrays, objects, dates, enums, and sets
+- 🎯 **Rich Data Types** - Support for primitives, arrays, objects, dates, enums, and sets.
 - 🔌 **Provider Agnostic** - Works with Liveblocks, PartyKit, or any Yjs provider
 - ↩️ **Undo/Redo** - Built-in support for state history
 - 🎮 **Bindable** - Use `bind:value` like you would with any Svelte state
@@ -56,17 +56,16 @@ Once created, you can use the state like a regular Svelte state: mutate it, bind
 	import { createClient } from '@liveblocks/client';
 
 	const document = syncroState({
-		// Optional: Connect to a real-time provider
-		// If omitted, state will be local-only during development
-		connect: () => {
+		// Optional but required for remote sync: Connect and sync to a yjs provider
+		// If omitted, state will be local-only and in memory.
+		sync: ({ doc, synced }) => {
 			const client = createClient({
 				publicApiKey: 'your-api-key'
 			});
-
-			return new Promise((resolve) => {
-				const { room } = client.enterRoom('room-id');
-				const provider = new LiveblocksYjsProvider(room, doc);
-				provider.on('synced', resolve);
+			const { room } = client.enterRoom('room-id');
+			const provider = new LiveblocksYjsProvider(room, doc);
+			provider.on('synced', () => {
+				synced();
 			});
 		},
 
@@ -89,7 +88,10 @@ Once created, you can use the state like a regular Svelte state: mutate it, bind
 			todos: y.array(y.object({
 				title: y.string(),
 				completed: y.boolean()
-			}))
+			})),
+
+			// Sets of any primitive type
+			colors: y.set(y.string())
 		}
 	});
 </script>
@@ -189,9 +191,7 @@ Every syncrostate object or array has three additional methods: `getState`, `get
 
 ```ts
 type State<T extends "object" | "array"> {
-  remotlySynced: boolean;
-  locallySynced: boolean;
-  connectionStatus: "CONNECTED" | "DISCONNECTED" | "CONNECTING";
+  synced: boolean;
   awareness: Awareness;
   doc: Y.Doc;
   undoManager: Y.UndoManager;

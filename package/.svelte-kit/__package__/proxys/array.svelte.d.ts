@@ -1,33 +1,32 @@
 import * as Y from 'yjs';
 import type { ArrayValidator } from '../schemas/array.js';
 import { type State, type SyncroStates } from './syncroState.svelte.js';
-import type { SyncedObject } from './object.svelte.js';
+import type { SyncedContainer } from './common.js';
 export declare class SyncedArray<T extends any = any> {
     state: State;
     validator: ArrayValidator<any>;
     yType: Y.Array<any>;
-    parent: SyncedObject | SyncedArray;
+    parent: SyncedContainer;
     key: string | number;
     syncroStates: SyncroStates[];
     proxy: any;
-    initialized: boolean;
     isNull: boolean;
     private get array();
-    deleteProperty: (target: any, pArg: any) => boolean;
+    setNull: () => void;
+    deleteProperty: (target: any, prop: any) => boolean;
     set value(input: any[] | null | undefined);
     get value(): any[] | null | undefined;
     constructor({ validator, yType, value, parent, key, state }: {
         validator: ArrayValidator<any>;
         yType: Y.Array<any>;
         value: any[];
-        parent: SyncedObject | SyncedArray;
+        parent: SyncedContainer;
         key: string | number;
         state: State;
     });
     toJSON: () => any[];
-    setNull: () => void;
     sync: (value?: any[]) => void;
-    observe: (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;
+    observe: () => (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;
     methods: {
         slice: (start?: number | undefined, end?: number | undefined) => any[];
         toReversed: () => any[];

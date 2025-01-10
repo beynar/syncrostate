@@ -1,6 +1,8 @@
 import * as Y from 'yjs';
-import { INITIALIZED, NULL } from './constants.js';
+import { INITIALIZED, NULL, NULL_ARRAY } from './constants.js';
 import { DEV } from 'esm-env';
+import { SyncedSet } from './proxys/set.svelte.js';
+import { createSyncroState } from './proxys/syncroState.svelte.js';
 export const isMissingOptionnal = ({ parent, key, validator }) => {
     const exists = parent instanceof Y.Map ? parent.has(String(key)) : !!parent.get(Number(key));
     const isMissingOptionnal = validator.$schema.optional && !exists;
@@ -8,7 +10,9 @@ export const isMissingOptionnal = ({ parent, key, validator }) => {
     return isMissingOptionnal && !hasDefault;
 };
 export const getInitialStringifiedValue = (value, validator) => {
-    if (validator.$schema.kind === 'array' || validator.$schema.kind === 'object') {
+    if (validator.$schema.kind === 'array' ||
+        validator.$schema.kind === 'object' ||
+        validator.$schema.kind === 'set') {
         return undefined;
     }
     const DEFAULT_VALUE = value === null ? null : (value ?? validator.$schema.default);
@@ -55,6 +59,7 @@ export const getInstance = (validator) => {
     switch (validator.$schema.kind) {
         case 'object':
             return Y.Map;
+        case 'set':
         case 'array':
             return Y.Array;
         default:
@@ -80,3 +85,60 @@ export const propertyToNumber = (p) => {
     }
     return p;
 };
+export const createYTypesArrayProxy = (yType) => {
+    return new Proxy([], {
+        get: (_target, key) => {
+            const index = propertyToNumber(key);
+            if (typeof index === 'number' && index >= 0 && index < yType.length) {
+                return yType.get(index);
+            }
+            return undefined;
+        }
+    });
+};
+export function setArrayToNull() {
+    this.isNull = true;
+    this.yType.delete(0, this.yType.length);
+    this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+}
+export const isArrayNull = ({ yType }) => {
+    return (yType.length === 1 && yType.get(0) instanceof Y.Text && yType.get(0).toString() === NULL_ARRAY);
+};
+export function observeArray() {
+    return (e, _transaction) => {
+        if (_transaction.origin !== this.state.transactionKey) {
+            let start = 0;
+            e.delta.forEach(({ retain, delete: _delete, insert }) => {
+                if (retain) {
+                    start += retain;
+                }
+                if (_delete) {
+                    const deleted = this.syncroStates.splice(start, _delete);
+                    deleted.forEach((state) => {
+                        state.destroy();
+                    });
+                    start -= _delete;
+                }
+                if (Array.isArray(insert)) {
+                    for (let i = 0; i < insert.length; i++) {
+                        if (insert[i] instanceof Y.Text && insert[i].toString() === NULL_ARRAY) {
+                            this.isNull = true;
+                            return;
+                        }
+                        this.syncroStates.splice(start, 0, createSyncroState({
+                            key: start,
+                            validator: this.validator.$schema.shape,
+                            parent: this,
+                            state: this.state
+                        }));
+                        start += 1;
+                    }
+                }
+            });
+            if (this instanceof SyncedSet) {
+                this.syncroStatesValues.clear();
+                this.syncroStatesValues.add(this.syncroStates.map((state) => state.value));
+            }
+        }
+    };
+}
