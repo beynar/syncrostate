@@ -17,7 +17,7 @@ Inspired by [Syncedstore](https://github.com/yousefed/SyncedStore), SyncroState 
 - 🚀 **Powered by Yjs** - Industry-leading CRDT for conflict-free real-time collaboration
 - 🔒 **Type-Safe** - Full TypeScript support with rich type inference
 - 💫 **Svelte Native** - Works like regular Svelte state with fine-grained reactivity
-- 🎯 **Rich Data Types** - Support for primitives, arrays, objects, dates, enums, and more
+- 🎯 **Rich Data Types** - Support for primitives, arrays, objects, dates, enums, and sets
 - 🔌 **Provider Agnostic** - Works with Liveblocks, PartyKit, or any Yjs provider
 - ↩️ **Undo/Redo** - Built-in support for state history
 - 🎮 **Bindable** - Use `bind:value` like you would with any Svelte state
@@ -107,7 +107,7 @@ SyncroState combines the power of Svelte's reactivity system with Yjs's CRDT cap
 
 ### Local State Management
 
-1. **Proxy-based State Tree**: When you create a state using `syncroState()`, it builds a tree of proxy objects that mirror your schema structure. Each property (primitive or nested) is wrapped in a specialized proxy that leverages Svelte's reactivity through `$state` or specialized proxy like `SvelteDate` and soon `SvelteSet` and `SvelteMap`.
+1. **Proxy-based State Tree**: When you create a state using `syncroState()`, it builds a tree of proxy objects that mirror your schema structure. Each property (primitive or nested) is wrapped in a specialized proxy that leverages Svelte's reactivity through `$state` or specialized proxy like `SvelteDate` or `SvelteSet` and soon `SvelteMap`.
 
 2. **Mutation Trapping**: These proxies intercept all state mutations (assignments, mutative operations, object modifications, reassignments). This allows SyncroState to:
    - Validate changes against the schema

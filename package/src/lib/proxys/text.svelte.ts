@@ -2,10 +2,9 @@ import type { StringValidator } from '../schemas/string.js';
 import * as Y from 'yjs';
 import { BaseSyncedType } from './base.svelte.js';
 import { NULL } from '../constants.js';
-import type { SyncedObject } from './object.svelte.js';
-import type { SyncedArray } from './array.svelte.js';
 import { logError } from '../utils.js';
 import type { State } from './syncroState.svelte.js';
+import type { SyncedContainer } from './common.js';
 
 export class SyncedText extends BaseSyncedType {
 	validator: StringValidator;
@@ -29,7 +28,7 @@ export class SyncedText extends BaseSyncedType {
 	constructor(opts: {
 		yType: Y.Text;
 		validator: StringValidator;
-		parent: SyncedObject | SyncedArray;
+		parent: SyncedContainer;
 		key: string | number;
 		state: State;
 	}) {

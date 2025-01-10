@@ -49,7 +49,7 @@
 			icon: '🚀'
 		},
 		{
-			title: 'Optional Schema',
+			title: 'Schema-less architecture',
 			description: 'Working on making syncrostate schema optional',
 			icon: '🎯'
 		},

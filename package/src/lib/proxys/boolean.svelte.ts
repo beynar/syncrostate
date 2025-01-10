@@ -1,8 +1,7 @@
 import type { BooleanValidator } from '../schemas/boolean.js';
 import { BaseSyncedType } from './base.svelte.js';
 import * as Y from 'yjs';
-import type { SyncedObject } from './object.svelte.js';
-import type { SyncedArray } from './array.svelte.js';
+import type { SyncedContainer } from './common.js';
 import { logError } from '../utils.js';
 import type { State } from './syncroState.svelte.js';
 
@@ -37,7 +36,7 @@ export class SyncedBoolean extends BaseSyncedType {
 	constructor(opts: {
 		yType: Y.Text;
 		validator: BooleanValidator;
-		parent: SyncedObject | SyncedArray;
+		parent: SyncedContainer;
 		key: string | number;
 		state: State;
 	}) {

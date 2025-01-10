@@ -19,6 +19,9 @@ import { onMount, setContext } from 'svelte';
 import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '$lib/constants.js';
 import { SyncedArray } from './array.svelte.js';
 import type { ArrayValidator } from '$lib/schemas/array.js';
+import type { SyncedContainer } from './common.js';
+import { SyncedSet } from './set.svelte.js';
+import type { SetValidator } from '$lib/schemas/set.js';
 
 export type SyncroStates =
 	| SyncedText
@@ -27,7 +30,8 @@ export type SyncroStates =
 	| SyncedDate
 	| SyncedEnum
 	| SyncedObject
-	| SyncedArray;
+	| SyncedArray
+	| SyncedSet;
 
 // For testing purpose
 const safeSetContext = (key: string, value: any) => {
@@ -157,7 +161,7 @@ export const createSyncroState = ({
 	validator: Validator;
 	value?: any;
 	forceNewType?: boolean;
-	parent: SyncedObject | SyncedArray;
+	parent: SyncedContainer;
 	state: State;
 }): SyncroStates => {
 	const type = getTypeFromParent({ forceNewType, parent: parent.yType, key, validator, value });
@@ -214,6 +218,16 @@ export const createSyncroState = ({
 				yType: type as Y.Map<any>,
 				validator: validator as ObjectValidator<any>,
 				baseImplementation: {},
+				value,
+				parent,
+				key,
+				state
+			});
+		}
+		case 'set': {
+			return new SyncedSet({
+				yType: type as Y.Array<any>,
+				validator: validator as SetValidator<any>,
 				value,
 				parent,
 				key,

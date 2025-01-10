@@ -1,11 +1,11 @@
 import * as Y from 'yjs';
 import type { ObjectValidator } from '../schemas/object.js';
 import type { Validator } from '../schemas/schema.js';
-import { isInitialized, isMissingOptionnal } from '../utils.js';
+import { isMissingOptionnal } from '../utils.js';
 import { type State, type SyncroStates, createSyncroState } from './syncroState.svelte.js';
-import { SyncedArray } from './array.svelte.js';
+import type { SyncedContainer } from './common.js';
 import { logError } from '../utils.js';
-import { NULL_OBJECT, STATE_SYMBOL } from '$lib/constants.js';
+import { NULL_OBJECT } from '$lib/constants.js';
 
 const createYTypesObjectProxy = (yType: Y.Map<any>) => {
 	return new Proxy(
@@ -27,9 +27,8 @@ export class SyncedObject {
 	syncroStates = $state<Record<string, SyncroStates>>({});
 	baseImplementation = {};
 	proxy: any;
-	parent: SyncedObject | SyncedArray;
+	parent: SyncedContainer;
 	key: string | number;
-	initialized: boolean = false;
 	isNull: boolean = $state(false);
 
 	deleteProperty = (target: any, p: any) => {
@@ -126,7 +125,7 @@ export class SyncedObject {
 		yType: Y.Map<any>;
 		baseImplementation?: any;
 		value?: any;
-		parent: SyncedObject | SyncedArray;
+		parent: SyncedContainer;
 		key: string | number;
 	}) {
 		this.parent = parent;
@@ -135,7 +134,6 @@ export class SyncedObject {
 		this.validator = validator;
 		this.yType = yType;
 		this.baseImplementation = baseImplementation;
-		this.initialized = isInitialized(this);
 
 		const shape = this.validator.$schema.shape;
 

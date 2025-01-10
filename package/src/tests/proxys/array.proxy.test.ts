@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, test, beforeAll } from 'vitest';
-import { getSyncroState, syncroState, y } from '../../lib/index.js';
+import { syncroState, y } from '../../lib/index.js';
 
 let createDocument = () =>
 	syncroState({

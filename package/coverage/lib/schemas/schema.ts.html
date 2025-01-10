@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>12/12</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>7/7</span>
+                <span class='fraction'>8/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">87.5% </span>
+                <span class="strong">88.88% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>7/8</span>
+                <span class='fraction'>8/9</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>11/11</span>
+                <span class='fraction'>12/12</span>
             </div>
         
             
@@ -130,7 +130,20 @@
 <a name='L65'></a><a href='#L65'>65</a>
 <a name='L66'></a><a href='#L66'>66</a>
 <a name='L67'></a><a href='#L67'>67</a>
-<a name='L68'></a><a href='#L68'>68</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -167,6 +180,9 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -207,8 +223,10 @@ import { StringValidator, type StringSchema } from './string.js';
 import { ObjectValidator, type ObjectSchema, type ObjectShape } from './object.js';
 import { RichTextValidator, type RichTextSchema } from './richtext.js';
 import { NumberValidator, type NumberSchema } from './number.js';
+import { SetValidator, type SetSchema } from './set.js';
 import type { State } from '$lib/proxys/syncroState.svelte.js';
 import type { Array as YArray, Map as YMap } from 'yjs';
+&nbsp;
 export type Schema =
 	| ArraySchema&lt;any&gt;
 	| ObjectSchema&lt;any&gt;
@@ -217,12 +235,15 @@ export type Schema =
 	| StringSchema
 	| NumberSchema
 	// | RichTextSchema
-	| EnumSchema&lt;any&gt;;
+	| EnumSchema&lt;any&gt;
+	| SetSchema&lt;any&gt;;
 &nbsp;
+export type PrimitiveValidator = BaseValidator&lt;Schema, boolean, boolean&gt;;
 export type Validator =
-	| BaseValidator&lt;Schema, boolean, boolean&gt;
+	| PrimitiveValidator
 	| ArrayValidator&lt;any&gt;
-	| ObjectValidator&lt;any&gt;;
+	| ObjectValidator&lt;any&gt;
+	| SetValidator&lt;any&gt;;
 &nbsp;
 export const y = {
 	boolean: () =&gt; new BooleanValidator(),
@@ -232,7 +253,8 @@ export const y = {
 	richText: <span class="fstat-no" title="function not covered" >() =&gt; new RichTextValidator(),</span>
 	object: &lt;T extends ObjectShape&gt;(shape: T) =&gt; new ObjectValidator&lt;T&gt;(shape),
 	array: &lt;T extends Validator&gt;(shape: T) =&gt; new ArrayValidator&lt;T&gt;(shape),
-	number: () =&gt; new NumberValidator()
+	number: () =&gt; new NumberValidator(),
+	set: &lt;T extends PrimitiveValidator&gt;(shape: T) =&gt; new SetValidator&lt;T&gt;(shape)
 };
 &nbsp;
 // I need to add these properties as optional because of typescript.
@@ -258,7 +280,9 @@ type InferSchemaType&lt;T&gt; =
 			? NORO&lt;N, O, S extends BaseSchema&lt;infer T&gt; ? T : never&gt;
 			: T extends ArrayValidator&lt;infer Shape&gt;
 				? InferSchemaType&lt;Shape&gt;[] &amp; Getters&lt;'array'&gt;
-				: never;
+				: T extends SetValidator&lt;infer Shape, infer O, infer N&gt;
+					? NORO&lt;N, O, Set&lt;InferSchemaType&lt;Shape&gt;&gt;&gt;
+					: never;
 &nbsp;
 export type SchemaOutput&lt;T extends ObjectShape&gt; = Simplify&lt;{
 	[K in keyof T]: InferSchemaType&lt;T[K]&gt;;
@@ -271,7 +295,7 @@ export type SchemaOutput&lt;T extends ObjectShape&gt; = Simplify&lt;{
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-01-09T16:41:47.071Z
+                at 2025-01-10T18:47:24.313Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

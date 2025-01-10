@@ -3,8 +3,7 @@ import type { DateValidator } from '../schemas/date.js';
 import { SvelteDate } from 'svelte/reactivity';
 import { NULL } from '../constants.js';
 import { BaseSyncedType } from './base.svelte.js';
-import type { SyncedArray } from './array.svelte.js';
-import type { SyncedObject } from './object.svelte.js';
+import type { SyncedContainer } from './common.js';
 import { logError } from '../utils.js';
 import type { State } from './syncroState.svelte.js';
 // 🚨🚨🚨 design decision: date are defaulted to new Date() if not optionnal or nullable and the value does not exist in the document.
@@ -84,7 +83,7 @@ export class SyncedDate extends BaseSyncedType {
 	constructor(opts: {
 		yType: Y.Text;
 		validator: DateValidator;
-		parent: SyncedObject | SyncedArray;
+		parent: SyncedContainer;
 		key: string | number;
 		state: State;
 	}) {
