@@ -1,10 +1,9 @@
 import * as Y from 'yjs';
 import { SvelteSet } from 'svelte/reactivity';
-
 import { isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
 import { createSyncroState, type State, type SyncroStates } from './syncroState.svelte.js';
 import type { SyncedContainer } from './common.js';
-import type { SetValidator } from '$lib/schemas/set.js';
+import type { SetValidator } from '../schemas/set.js';
 
 export class SyncedSet {
 	state: State;

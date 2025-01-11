@@ -16,12 +16,12 @@ import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
 import { getTypeFromParent, logError } from '../utils.js';
 import { onMount, setContext } from 'svelte';
-import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '$lib/constants.js';
+import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '../constants.js';
 import { SyncedArray } from './array.svelte.js';
-import type { ArrayValidator } from '$lib/schemas/array.js';
+import type { ArrayValidator } from '../schemas/array.js';
 import type { SyncedContainer } from './common.js';
 import { SyncedSet } from './set.svelte.js';
-import type { SetValidator } from '$lib/schemas/set.js';
+import type { SetValidator } from '../schemas/set.js';
 
 export type SyncroStates =
 	| SyncedText

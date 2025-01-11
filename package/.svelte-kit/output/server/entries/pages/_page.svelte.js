@@ -4,7 +4,6 @@ import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import hljs from "highlight.js";
 import javascript from "highlight.js/lib/languages/json";
-import { LiveblocksYjsProvider } from "@liveblocks/yjs";
 import { createClient } from "@liveblocks/client";
 const NULL = `$/_NULL_/$`;
 const NULL_ARRAY = `$/_NULL_ARRAY_/$`;
@@ -36,9 +35,6 @@ class SyncedSet {
     this.yType.observe(this.observe);
   }
   sync = (value) => {
-    const isSet = value instanceof Set;
-    const isArray = Array.isArray(value);
-    isSet ? Array.from(value) : isArray ? value : null;
     this.state.transaction(() => {
       this.syncroStatesValues.clear();
       this.syncroStates = [];
@@ -101,11 +97,11 @@ class SyncedSet {
       if (prop === "getState") {
         return () => this.state;
       }
-      if (prop === "getType") {
+      if (prop === "getYType") {
         return () => this.yType;
       }
-      if (prop === "getTypes") {
-        return () => new Set(createYTypesArrayProxy(this.yType));
+      if (prop === "getYTypes") {
+        return () => this.yType.toArray();
       }
       if (prop === Symbol.iterator) {
         return () => this.syncroStatesValues.values();
@@ -298,17 +294,6 @@ const propertyToNumber = (p) => {
   }
   return p;
 };
-const createYTypesArrayProxy = (yType) => {
-  return new Proxy([], {
-    get: (_target, key) => {
-      const index = propertyToNumber(key);
-      if (typeof index === "number" && index >= 0 && index < yType.length) {
-        return yType.get(index);
-      }
-      return void 0;
-    }
-  });
-};
 function setArrayToNull() {
   this.isNull = true;
   this.yType.delete(0, this.yType.length);
@@ -359,16 +344,6 @@ function observeArray() {
     }
   };
 }
-const createYTypesObjectProxy = (yType) => {
-  return new Proxy({}, {
-    get: (target, key) => {
-      if (typeof key === "string" && yType.has(key)) {
-        return yType.get(key);
-      }
-      return void 0;
-    }
-  });
-};
 class SyncedObject {
   state;
   validator;
@@ -465,20 +440,20 @@ class SyncedObject {
     this.baseImplementation = baseImplementation;
     const shape = this.validator.$schema.shape;
     this.proxy = new Proxy({}, {
-      get: (target, key2) => {
-        if (key2 === "getState") {
+      get: (target, prop) => {
+        if (prop === "getState") {
           return () => state;
         }
-        if (key2 === "getType") {
+        if (prop === "getYType") {
           return () => yType;
         }
-        if (key2 === "getTypes") {
-          return () => createYTypesObjectProxy(yType);
+        if (prop === "getYTypes") {
+          return () => Object.fromEntries(yType.entries());
         }
-        if (key2 === "toJSON") {
+        if (prop === "toJSON") {
           return this.toJSON();
         }
-        const syncroState2 = this.syncroStates[key2];
+        const syncroState2 = this.syncroStates[prop];
         if (!syncroState2) {
           return void 0;
         }
@@ -508,14 +483,14 @@ class SyncedObject {
         return true;
       },
       deleteProperty: this.deleteProperty,
-      has: (target, key2) => {
-        if (typeof key2 !== "string") {
+      has: (target, prop) => {
+        if (typeof prop !== "string") {
           return false;
         }
-        return this.yType.has(key2);
+        return this.yType.has(prop);
       },
-      getOwnPropertyDescriptor(target, key2) {
-        if (typeof key2 === "string" && yType.has(key2) || key2 === "toJSON") {
+      getOwnPropertyDescriptor(target, prop) {
+        if (typeof prop === "string" && yType.has(prop) || prop === "toJSON") {
           return { enumerable: true, configurable: true };
         }
         return void 0;
@@ -998,17 +973,17 @@ class SyncedArray {
     this.state = state;
     yType.observe(this.observe);
     this.proxy = new Proxy([], {
-      get: (target, pArg, receiver) => {
-        if (pArg === "getState") {
+      get: (target, prop, receiver) => {
+        if (prop === "getState") {
           return () => state;
         }
-        if (pArg === "getType") {
+        if (prop === "getYType") {
           return () => this.yType;
         }
-        if (pArg === "getTypes") {
-          return () => createYTypesArrayProxy(this.yType);
+        if (prop === "getYTypes") {
+          return () => this.yType.toArray();
         }
-        const p = propertyToNumber(pArg);
+        const p = propertyToNumber(prop);
         if (Number.isInteger(p)) {
           const syncroState2 = this.syncroStates[p];
           if (!syncroState2) {
@@ -1036,8 +1011,8 @@ class SyncedArray {
         }
         return Reflect.get(target, p, receiver);
       },
-      set: (target, pArg, value2) => {
-        const p = propertyToNumber(pArg);
+      set: (target, prop, value2) => {
+        const p = propertyToNumber(prop);
         if (Number.isInteger(p)) {
           if (value2 === void 0) {
             return this.deleteProperty(target, p);
@@ -1060,8 +1035,8 @@ class SyncedArray {
         return true;
       },
       deleteProperty: this.deleteProperty,
-      has: (target, pArg) => {
-        const p = propertyToNumber(pArg);
+      has: (target, prop) => {
+        const p = propertyToNumber(prop);
         if (typeof p !== "number") {
           return Reflect.has(target, p);
         }
@@ -1071,8 +1046,8 @@ class SyncedArray {
           return false;
         }
       },
-      getOwnPropertyDescriptor: (target, pArg) => {
-        const p = propertyToNumber(pArg);
+      getOwnPropertyDescriptor: (target, prop) => {
+        const p = propertyToNumber(prop);
         if (p === "length") {
           return {
             enumerable: false,
@@ -1849,14 +1824,14 @@ function _page($$payload, $$props) {
   const client = createClient({
     publicApiKey: "pk_prod_ytItHgLSil9pFkJELGPI7yWptk_jNMifKfv3JhWODRGX2vK3hrt-3oNzDkrc1kcx"
   });
-  const { room } = client.enterRoom("your-room-id-10");
+  client.enterRoom("your-room-id-10");
   const document = syncroState({
-    sync: async ({ doc, synced }) => {
-      const yProvider = new LiveblocksYjsProvider(room, doc);
-      yProvider.on("synced", () => {
-        synced();
-      });
-    },
+    // sync: async ({ doc, synced }) => {
+    // 	const yProvider = new LiveblocksYjsProvider(room, doc);
+    // 	yProvider.on('synced', () => {
+    // 		synced();
+    // 	});
+    // },
     schema: {
       name: y.string().default("Bob").optional(),
       firstName: y.string().default("Smith"),
