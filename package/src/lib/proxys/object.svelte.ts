@@ -218,6 +218,10 @@ export class SyncedObject {
 	}
 	observe = (e: Y.YMapEvent<any>, _transaction: Y.Transaction) => {
 		if (_transaction.origin !== this.state.transactionKey) {
+			if (this.yType.has(NULL_OBJECT)) {
+				this.isNull = true;
+				return;
+			}
 			e.changes?.keys.forEach(({ action }, key) => {
 				const syncedType = this.syncroStates[key];
 				if (action === 'delete' && syncedType) {
@@ -236,10 +240,6 @@ export class SyncedObject {
 					Object.assign(this.syncroStates, { [key]: syncroState });
 				}
 			});
-			if (this.yType.has(NULL_OBJECT)) {
-				this.isNull = true;
-				return;
-			}
 		}
 	};
 

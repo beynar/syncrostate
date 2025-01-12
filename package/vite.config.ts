@@ -6,6 +6,7 @@ export default defineConfig({
 
 	test: {
 		// include: ['src/tests/**/set.proxy.{test,spec}.{js,ts}', 'src/tests/**/set.{test,spec}.{js,ts}'],
+		// include: ['src/tests/**/syncroState.{test,spec}.{js,ts}'],
 		include: ['src/tests/**/*.{test,spec}.{js,ts}'],
 		coverage: {
 			provider: 'v8',

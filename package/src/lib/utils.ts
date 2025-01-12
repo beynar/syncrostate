@@ -6,6 +6,7 @@ import { DEV } from 'esm-env';
 import type { SyncedArray } from './proxys/array.svelte.js';
 import { SyncedSet } from './proxys/set.svelte.js';
 import { createSyncroState } from './proxys/syncroState.svelte.js';
+import { flushSync } from 'svelte';
 
 export const isMissingOptionnal = ({
 	parent,
@@ -133,45 +134,57 @@ export const isArrayNull = ({ yType }: { yType: Y.Array<any> }) => {
 	);
 };
 
-export function observeArray(this: SyncedArray | SyncedSet) {
-	return (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => {
-		if (_transaction.origin !== this.state.transactionKey) {
-			let start = 0;
-			e.delta.forEach(({ retain, delete: _delete, insert }) => {
-				if (retain) {
-					start += retain;
-				}
-				if (_delete) {
-					const deleted = this.syncroStates.splice(start, _delete);
-					deleted.forEach((state) => {
-						state.destroy();
-					});
-					start -= _delete;
-				}
-				if (Array.isArray(insert)) {
-					for (let i = 0; i < insert.length; i++) {
-						if (insert[i] instanceof Y.Text && insert[i].toString() === NULL_ARRAY) {
-							this.isNull = true;
-							return;
-						}
-						this.syncroStates.splice(
-							start,
-							0,
-							createSyncroState({
-								key: start,
-								validator: this.validator.$schema.shape,
-								parent: this,
-								state: this.state
-							})
-						);
-						start += 1;
-					}
-				}
-			});
-			if (this instanceof SyncedSet) {
-				this.syncroStatesValues.clear();
-				this.syncroStatesValues.add(this.syncroStates.map((state) => state.value));
-			}
+export function observeArray(
+	this: SyncedArray | SyncedSet,
+	e: Y.YArrayEvent<any>,
+	_transaction: Y.Transaction
+) {
+	if (_transaction.origin !== this.state.transactionKey) {
+		if (isArrayNull(this)) {
+			this.isNull = true;
+			return;
 		}
-	};
+
+		let start = 0;
+		e.delta.forEach(({ retain, delete: _delete, insert }) => {
+			if (retain) {
+				start += retain;
+			}
+			if (_delete) {
+				const deleted = this.syncroStates.splice(start, _delete);
+				deleted.forEach((state) => {
+					state.destroy();
+				});
+				start -= _delete;
+			}
+			if (Array.isArray(insert)) {
+				for (let i = 0; i < insert.length; i++) {
+					if (insert[i] instanceof Y.Text && insert[i].toString() === NULL_ARRAY) {
+						this.isNull = true;
+						return;
+					}
+					this.syncroStates.splice(
+						start,
+						0,
+						createSyncroState({
+							key: start,
+							validator: this.validator.$schema.shape,
+							parent: this,
+							state: this.state
+						})
+					);
+					start += 1;
+				}
+			}
+		});
+
+		if (this instanceof SyncedSet) {
+			this.syncroStatesValues.clear();
+			this.syncroStates
+				.map((state) => state.value)
+				.forEach((value) => {
+					this.syncroStatesValues.add(value);
+				});
+		}
+	}
 }

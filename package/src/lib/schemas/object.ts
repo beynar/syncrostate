@@ -63,7 +63,11 @@ export class ObjectValidator<
 			return null;
 		}
 		return Object.entries(this.$schema.shape).reduce((acc, [key, validator]) => {
-			Object.assign(acc, { [key]: validator.coerce(value[key]) });
+			const isValid = validator.isValid(value[key]);
+			if (!isValid) {
+				return acc;
+			}
+			Object.assign(acc, { [key]: value[key] });
 			return acc;
 		}, {} as SchemaOutput<T>);
 	}

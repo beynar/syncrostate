@@ -56,9 +56,13 @@ export type State = {
 
 export const syncroState = <T extends ObjectShape>({
 	schema,
-	sync
+	sync,
+	doc: customDoc,
+	awareness: customAwareness
 }: {
 	schema: T;
+	doc?: Y.Doc;
+	awareness?: Awareness;
 	sync?: ({
 		doc,
 		awareness,
@@ -69,12 +73,12 @@ export const syncroState = <T extends ObjectShape>({
 		synced: () => void;
 	}) => Promise<void>;
 }): SchemaOutput<T> => {
-	const doc = new Y.Doc();
-	const awareness = new Awareness(doc);
+	const doc = customDoc ?? new Y.Doc();
+	const awareness = customAwareness ?? new Awareness(doc);
 	const schemaValidator = new ObjectValidator(schema);
 	const stateMap = doc.getMap('$state');
 	const undoManager = new Y.UndoManager(stateMap);
-
+	const transactionKey = new TRANSACTION_KEY();
 	let state = $state<State>({
 		synced: sync ? false : true,
 		initialized: false,
@@ -82,9 +86,9 @@ export const syncroState = <T extends ObjectShape>({
 		doc,
 		undoManager,
 		transaction: (fn: () => void) => {
-			state.doc.transact(fn, TRANSACTION_KEY);
+			state.doc.transact(fn, transactionKey);
 		},
-		transactionKey: TRANSACTION_KEY,
+		transactionKey,
 		undo: () => {
 			if (undoManager?.canUndo()) {
 				undoManager.undo();
