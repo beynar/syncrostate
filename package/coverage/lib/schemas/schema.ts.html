@@ -25,28 +25,28 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>12/12</span>
+                <span class='fraction'>13/13</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>9/9</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">88.88% </span>
+                <span class="strong">90% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>8/9</span>
+                <span class='fraction'>9/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>12/12</span>
+                <span class='fraction'>13/13</span>
             </div>
         
             
@@ -151,7 +151,22 @@
 <a name='L86'></a><a href='#L86'>86</a>
 <a name='L87'></a><a href='#L87'>87</a>
 <a name='L88'></a><a href='#L88'>88</a>
-<a name='L89'></a><a href='#L89'>89</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -194,6 +209,15 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -252,6 +276,7 @@ import { NumberValidator, type NumberSchema } from './number.js';
 import { SetValidator, type SetSchema } from './set.js';
 import type { State } from '$lib/proxys/syncroState.svelte.js';
 import type { Array as YArray, Map as YMap, AbstractType, Text as YText } from 'yjs';
+import { MapValidator, type MapSchema } from './map.js';
 &nbsp;
 export type Schema =
 	| ArraySchema&lt;any&gt;
@@ -262,14 +287,16 @@ export type Schema =
 	| NumberSchema
 	// | RichTextSchema
 	| EnumSchema&lt;any&gt;
-	| SetSchema&lt;any&gt;;
+	| SetSchema&lt;any&gt;
+	| MapSchema&lt;any&gt;;
 &nbsp;
 export type PrimitiveValidator = BaseValidator&lt;Schema, boolean, boolean&gt;;
 export type Validator =
 	| PrimitiveValidator
 	| ArrayValidator&lt;any&gt;
 	| ObjectValidator&lt;any&gt;
-	| SetValidator&lt;any&gt;;
+	| SetValidator&lt;any&gt;
+	| MapValidator&lt;any&gt;;
 &nbsp;
 export const y = {
 	boolean: () =&gt; new BooleanValidator(),
@@ -280,7 +307,8 @@ export const y = {
 	object: &lt;T extends ObjectShape&gt;(shape: T) =&gt; new ObjectValidator&lt;T&gt;(shape),
 	array: &lt;T extends Validator&gt;(shape: T) =&gt; new ArrayValidator&lt;T&gt;(shape),
 	number: () =&gt; new NumberValidator(),
-	set: &lt;T extends PrimitiveValidator&gt;(shape: T) =&gt; new SetValidator&lt;T&gt;(shape)
+	set: &lt;T extends PrimitiveValidator&gt;(shape: T) =&gt; new SetValidator&lt;T&gt;(shape),
+	map: &lt;T extends Validator&gt;(shape: T) =&gt; new MapValidator&lt;T&gt;(shape)
 };
 &nbsp;
 // I need to add these properties as optional because of typescript.
@@ -296,11 +324,17 @@ type InferYTypeFromShape&lt;Shape extends Validator | ObjectShape&gt; = Shape ex
 			? YMap&lt;any&gt;
 			: Shape extends SetValidator&lt;any&gt;
 				? YArray&lt;any&gt;
-				: YText;
+				: Shape extends MapValidator&lt;any&gt;
+					? YMap&lt;any&gt;
+					: YText;
 &nbsp;
-type Getters&lt;T extends 'object' | 'array', Shape extends Validator | ObjectShape&gt; = {
+type Getters&lt;T extends 'object' | 'array' | 'map', Shape extends Validator | ObjectShape&gt; = {
 	getState?: () =&gt; State;
-	getYTypes?: () =&gt; T extends 'array' ? AbstractType&lt;any&gt;[] : InferYTypeFromShape&lt;Shape&gt;;
+	getYTypes?: () =&gt; T extends 'array'
+		? AbstractType&lt;any&gt;[]
+		: T extends 'map'
+			? Record&lt;string, InferYTypeFromShape&lt;Shape&gt;&gt;
+			: InferYTypeFromShape&lt;Shape&gt;;
 	getYType?: () =&gt; T extends 'array' ? YArray&lt;any&gt; : YMap&lt;any&gt;;
 };
 &nbsp;
@@ -312,7 +346,7 @@ type NORO&lt;N extends boolean, O extends boolean, T&gt; = N extends true
 		? T | undefined
 		: T;
 &nbsp;
-type InferSchemaType&lt;T&gt; =
+export type InferSchemaType&lt;T&gt; =
 	T extends ObjectValidator&lt;infer Shape, infer O, infer N&gt;
 		? NORO&lt;N, O, SchemaOutput&lt;Shape&gt;&gt;
 		: T extends BaseValidator&lt;infer S, infer O, infer N&gt;
@@ -321,7 +355,9 @@ type InferSchemaType&lt;T&gt; =
 				? InferSchemaType&lt;Shape&gt;[] &amp; Getters&lt;'array', Shape&gt;
 				: T extends SetValidator&lt;infer Shape, infer O, infer N&gt;
 					? NORO&lt;N, O, Set&lt;InferSchemaType&lt;Shape&gt;&gt;&gt; &amp; Getters&lt;'array', Shape&gt;
-					: never;
+					: T extends MapValidator&lt;infer Shape, infer O, infer N&gt;
+						? NORO&lt;N, O, Map&lt;string, InferSchemaType&lt;Shape&gt;&gt;&gt; &amp; Getters&lt;'map', Shape&gt;
+						: never;
 &nbsp;
 export type SchemaOutput&lt;T extends ObjectShape&gt; = Simplify&lt;{
 	[K in keyof T]: InferSchemaType&lt;T[K]&gt;;
@@ -334,7 +370,7 @@ export type SchemaOutput&lt;T extends ObjectShape&gt; = Simplify&lt;{
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-01-12T09:48:13.764Z
+                at 2025-01-13T11:16:37.978Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

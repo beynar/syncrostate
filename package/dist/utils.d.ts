@@ -25,4 +25,4 @@ export declare function setArrayToNull(this: SyncedArray | SyncedSet): void;
 export declare const isArrayNull: ({ yType }: {
     yType: Y.Array<any>;
 }) => boolean;
-export declare function observeArray(this: SyncedArray | SyncedSet): (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;
+export declare function observeArray(this: SyncedArray | SyncedSet, e: Y.YArrayEvent<any>, _transaction: Y.Transaction): void;

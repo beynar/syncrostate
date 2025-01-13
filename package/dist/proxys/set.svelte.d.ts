@@ -13,7 +13,7 @@ export declare class SyncedSet {
     syncroStates: SyncroStates[];
     syncroStatesValues: SvelteSet<any[]>;
     setNull: () => void;
-    observe: () => (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;
+    observe: (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;
     constructor(opts: {
         yType: Y.Array<any>;
         validator: SetValidator<any>;

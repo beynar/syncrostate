@@ -18,7 +18,12 @@ const schema = {
 		.optional()
 		.nullable()
 		.default({ text: 'default', number: 1, boolean: false }),
-	set: y.set(y.string()).optional().nullable().default(['default'])
+	set: y.set(y.string()).optional().nullable().default(['default']),
+	map: y
+		.map(y.string())
+		.optional()
+		.nullable()
+		.default(new Map([['key', 'value']]))
 };
 
 const doc = new Doc();
@@ -184,6 +189,52 @@ describe('SyncroState', () => {
 			(state1.set as any) = undefined;
 			expect(state1.set).toBe(undefined);
 			expect(state2.set).toBe(undefined);
+		});
+	});
+
+	describe('map field', () => {
+		it('should sync regular map mutation', () => {
+			state1.map = new Map([
+				['hello', 'world'],
+				['test', 'value']
+			]);
+
+			expect(Array.from(state1.map.entries())).toEqual([
+				['hello', 'world'],
+				['test', 'value']
+			]);
+			expect(Array.from(state2.map.entries())).toEqual([
+				['hello', 'world'],
+				['test', 'value']
+			]);
+		});
+
+		it('should sync null map mutation', () => {
+			(state1.map as any) = null;
+			expect(state1.map).toBe(null);
+			expect(state2.map).toBe(null);
+		});
+
+		it('should sync undefined map mutation', () => {
+			(state1.map as any) = undefined;
+			expect(state1.map).toBe(undefined);
+			expect(state2.map).toBe(undefined);
+		});
+
+		it('should sync map operations', () => {
+			state1.map = new Map();
+			state1.map.set('key1', 'value1');
+			expect(state1.map.get('key1')).toBe('value1');
+			expect(state2.map.get('key1')).toBe('value1');
+
+			state1.map.delete('key1');
+			expect(state1.map.has('key1')).toBe(false);
+			expect(state2.map.has('key1')).toBe(false);
+
+			state1.map.set('key2', 'value2');
+			state1.map.clear();
+			expect(state1.map.size).toBe(0);
+			expect(state2.map.size).toBe(0);
 		});
 	});
 });

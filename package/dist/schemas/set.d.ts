@@ -10,7 +10,7 @@ export declare class SetValidator<T extends PrimitiveValidator, O extends boolea
     constructor(shape: T);
     optional(): SetValidator<T, true, N>;
     nullable(): SetValidator<T, O, true>;
-    default(value: Set<SetType<T>> | SetType<T>[]): SetValidator<T, O, true>;
+    default(value: Set<SetType<T>> | SetType<T>[]): SetValidator<T, O, N>;
     isValid: (value: any) => value is Set<SetType<T>>;
     coerce(value: any): Set<SetType<T>> | null;
     parse(value: any): {

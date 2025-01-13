@@ -23,16 +23,16 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.83% </span>
+                <span class="strong">98.78% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>170/172</span>
+                <span class='fraction'>162/164</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">75% </span>
+                <span class="strong">77.77% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>6/8</span>
+                <span class='fraction'>7/9</span>
             </div>
         
             
@@ -44,9 +44,9 @@
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">98.83% </span>
+                <span class="strong">98.78% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>170/172</span>
+                <span class='fraction'>162/164</span>
             </div>
         
             
@@ -343,39 +343,11 @@
 <a name='L278'></a><a href='#L278'>278</a>
 <a name='L279'></a><a href='#L279'>279</a>
 <a name='L280'></a><a href='#L280'>280</a>
-<a name='L281'></a><a href='#L281'>281</a>
-<a name='L282'></a><a href='#L282'>282</a>
-<a name='L283'></a><a href='#L283'>283</a>
-<a name='L284'></a><a href='#L284'>284</a>
-<a name='L285'></a><a href='#L285'>285</a>
-<a name='L286'></a><a href='#L286'>286</a>
-<a name='L287'></a><a href='#L287'>287</a>
-<a name='L288'></a><a href='#L288'>288</a>
-<a name='L289'></a><a href='#L289'>289</a>
-<a name='L290'></a><a href='#L290'>290</a>
-<a name='L291'></a><a href='#L291'>291</a>
-<a name='L292'></a><a href='#L292'>292</a>
-<a name='L293'></a><a href='#L293'>293</a>
-<a name='L294'></a><a href='#L294'>294</a>
-<a name='L295'></a><a href='#L295'>295</a>
-<a name='L296'></a><a href='#L296'>296</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L281'></a><a href='#L281'>281</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -437,8 +409,6 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -662,19 +632,6 @@ import type { SyncedContainer } from './common.js';
 import { logError } from '../utils.js';
 import { NULL_OBJECT } from '$lib/constants.js';
 &nbsp;
-const createYTypesObjectProxy = (yType: Y.Map&lt;any&gt;) =&gt; {
-	return new Proxy(
-		{},
-		{
-			get: (target, key) =&gt; {
-				if (typeof key === 'string' &amp;&amp; yType.has(key)) {
-					return yType.get(key);
-				}
-				return undefined;
-			}
-		}
-	);
-};
 export class SyncedObject {
 	state: State;
 	validator: ObjectValidator&lt;any&gt;;
@@ -699,8 +656,8 @@ export class SyncedObject {
 			logError('Can not delete non optional property', p);
 			return true;
 		}
-		this.yType.delete(p);
 		syncroState.destroy();
+		this.yType.delete(p);
 		delete this.syncroStates[p];
 		return true;
 	};
@@ -734,9 +691,7 @@ export class SyncedObject {
 				}
 				const remainingStates = Object.keys(this.syncroStates).filter((key) =&gt; !(key in value));
 				remainingStates.forEach((key) =&gt; {
-					this.syncroStates[key].destroy();
-					delete this.syncroStates[key];
-					this.yType.delete(key);
+					this.deleteProperty({}, key);
 				});
 				Object.entries(value).forEach(([key, value]) =&gt; {
 					if (key in shape) {
@@ -955,7 +910,7 @@ export class SyncedObject {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-01-12T09:48:13.764Z
+                at 2025-01-13T11:16:37.978Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

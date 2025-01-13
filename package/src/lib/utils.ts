@@ -1,12 +1,11 @@
 import * as Y from 'yjs';
 import type { Validator } from './schemas/schema.js';
-import { INITIALIZED, NULL, NULL_ARRAY } from './constants.js';
+import { NULL, NULL_ARRAY } from './constants.js';
 import type { BaseValidator } from './schemas/base.js';
 import { DEV } from 'esm-env';
 import type { SyncedArray } from './proxys/array.svelte.js';
 import { SyncedSet } from './proxys/set.svelte.js';
 import { createSyncroState } from './proxys/syncroState.svelte.js';
-import { flushSync } from 'svelte';
 
 export const isMissingOptionnal = ({
 	parent,
@@ -27,6 +26,7 @@ export const getInitialStringifiedValue = (value: any, validator: Validator) => 
 	if (
 		validator.$schema.kind === 'array' ||
 		validator.$schema.kind === 'object' ||
+		validator.$schema.kind === 'map' ||
 		validator.$schema.kind === 'set'
 	) {
 		return undefined;
@@ -90,6 +90,7 @@ export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>(
 
 export const getInstance = (validator: Validator): (new () => Y.AbstractType<any>) | null => {
 	switch (validator.$schema.kind) {
+		case 'map':
 		case 'object':
 			return Y.Map;
 		case 'set':
@@ -123,9 +124,16 @@ export const propertyToNumber = (p: string | number | symbol) => {
 };
 
 export function setArrayToNull(this: SyncedArray | SyncedSet) {
-	this.isNull = true;
-	this.yType.delete(0, this.yType.length);
-	this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+	this.state.transaction(() => {
+		this.syncroStates.forEach((state) => state.destroy());
+		if (this instanceof SyncedSet) {
+			this.syncroStatesValues.clear();
+		}
+		this.syncroStates = [];
+		this.isNull = true;
+		this.yType.delete(0, this.yType.length);
+		this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+	});
 }
 
 export const isArrayNull = ({ yType }: { yType: Y.Array<any> }) => {

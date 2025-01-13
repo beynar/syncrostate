@@ -1,19 +1,105 @@
 import { e as escape_html } from "../../chunks/escaping.js";
+import { a as is_array, c as get_prototype_of, o as object_prototype } from "../../chunks/utils.js";
 import { s as setContext, c as pop, p as push } from "../../chunks/index.js";
 import * as Y from "yjs";
 import { Awareness } from "y-protocols/awareness";
 import hljs from "highlight.js";
 import javascript from "highlight.js/lib/languages/json";
 import { createClient } from "@liveblocks/client";
+import { LiveblocksYjsProvider } from "@liveblocks/yjs";
+const empty = [];
+function snapshot(value, skip_warning = false) {
+  return clone(value, /* @__PURE__ */ new Map(), "", empty);
+}
+function clone(value, cloned, path, paths, original = null) {
+  if (typeof value === "object" && value !== null) {
+    var unwrapped = cloned.get(value);
+    if (unwrapped !== void 0) return unwrapped;
+    if (value instanceof Map) return (
+      /** @type {Snapshot<T>} */
+      new Map(value)
+    );
+    if (value instanceof Set) return (
+      /** @type {Snapshot<T>} */
+      new Set(value)
+    );
+    if (is_array(value)) {
+      var copy = (
+        /** @type {Snapshot<any>} */
+        Array(value.length)
+      );
+      cloned.set(value, copy);
+      if (original !== null) {
+        cloned.set(original, copy);
+      }
+      for (var i = 0; i < value.length; i += 1) {
+        var element = value[i];
+        if (i in value) {
+          copy[i] = clone(element, cloned, path, paths);
+        }
+      }
+      return copy;
+    }
+    if (get_prototype_of(value) === object_prototype) {
+      copy = {};
+      cloned.set(value, copy);
+      if (original !== null) {
+        cloned.set(original, copy);
+      }
+      for (var key in value) {
+        copy[key] = clone(value[key], cloned, path, paths);
+      }
+      return copy;
+    }
+    if (value instanceof Date) {
+      return (
+        /** @type {Snapshot<T>} */
+        structuredClone(value)
+      );
+    }
+    if (typeof /** @type {T & { toJSON?: any } } */
+    value.toJSON === "function") {
+      return clone(
+        /** @type {T & { toJSON(): any } } */
+        value.toJSON(),
+        cloned,
+        path,
+        paths,
+        // Associate the instance with the toJSON clone
+        value
+      );
+    }
+  }
+  if (value instanceof EventTarget) {
+    return (
+      /** @type {Snapshot<T>} */
+      value
+    );
+  }
+  try {
+    return (
+      /** @type {Snapshot<T>} */
+      structuredClone(value)
+    );
+  } catch (e) {
+    return (
+      /** @type {Snapshot<T>} */
+      value
+    );
+  }
+}
 const NULL = `$/_NULL_/$`;
 const NULL_ARRAY = `$/_NULL_ARRAY_/$`;
 const NULL_OBJECT = `$/_NULL_OBJECT_/$`;
 const INITIALIZED = `$/_INITIALIZED_/$`;
-const CONTEXT_KEY = "SYNCED_STATE_CONTEXT";
+const PRENSENCE_ID = `$/_PRENSENCE_ID_/$`;
+const PRENSENCE = `$/_PRENSENCE_/$`;
+const CONTEXT_KEY = "$/_SYNCED_STATE_CONTEXT_$/";
 const TRANSACTION_KEY = class Transaction {
 };
 const SvelteDate = globalThis.Date;
 const SvelteSet = globalThis.Set;
+const SvelteMap = globalThis.Map;
 class SyncedSet {
   state;
   validator;
@@ -168,52 +254,54 @@ class SyncedSet {
   }
   set value(input) {
     const { isValid, value } = this.validator.parse(input);
-    console.log({ value, isValid });
-    if (!isValid) {
-      return;
-    } else {
-      if (!value) {
-        if (value === void 0) ;
-        else {
-          this.setNull();
-        }
+    this.state.transaction(() => {
+      if (!isValid) {
+        return;
       } else {
-        this.syncroStatesValues.clear();
-        const valueArray = Array.from(value);
-        if (this.isNull) {
-          this.isNull = false;
-          this.yType.delete(0, this.yType.length);
-        }
-        if (!this.isNull) {
-          const remainingStates = Array.from(this.syncroStates).slice(valueArray.length);
-          remainingStates.forEach((state) => {
-            state.destroy();
-          });
-          if (remainingStates.length) {
-            this.yType.delete(valueArray.length, remainingStates.length);
+        if (!value) {
+          if (value === void 0) ;
+          else {
+            this.setNull();
           }
-        }
-        this.syncroStates = valueArray.map((item, index) => {
-          const previsousState = this.syncroStates[index];
-          if (previsousState) {
-            previsousState.value = item;
-            this.syncroStatesValues.add(previsousState.value);
-            return previsousState;
-          } else {
-            const state = createSyncroState({
-              forceNewType: true,
-              key: index,
-              validator: this.validator.$schema.shape,
-              parent: this,
-              value: item,
-              state: this.state
+        } else {
+          this.syncroStatesValues.clear();
+          const valueArray = Array.from(value);
+          if (this.isNull) {
+            this.isNull = false;
+            this.yType.delete(0, this.yType.length);
+          }
+          if (!this.isNull) {
+            const remainingStates = Array.from(this.syncroStates).slice(valueArray.length);
+            remainingStates.forEach((state) => {
+              state.destroy();
             });
-            this.syncroStatesValues.add(state.value);
-            return state;
+            if (remainingStates.length) {
+              this.yType.delete(valueArray.length, remainingStates.length);
+            }
           }
-        });
+          this.syncroStates = valueArray.map((item, index) => {
+            const previsousState = this.syncroStates[index];
+            if (previsousState) {
+              previsousState.value = item;
+              console.log("state", previsousState.value);
+              this.syncroStatesValues.add(previsousState.value);
+              return previsousState;
+            } else {
+              const state = createSyncroState({
+                forceNewType: true,
+                key: index,
+                validator: this.validator.$schema.shape,
+                parent: this,
+                value: item,
+                state: this.state
+              });
+              this.syncroStatesValues.add(state.value);
+              return state;
+            }
+          });
+        }
       }
-    }
+    });
   }
 }
 const isMissingOptionnal = ({
@@ -227,7 +315,7 @@ const isMissingOptionnal = ({
   return isMissingOptionnal2 && !hasDefault;
 };
 const getInitialStringifiedValue = (value, validator) => {
-  if (validator.$schema.kind === "array" || validator.$schema.kind === "object" || validator.$schema.kind === "set") {
+  if (validator.$schema.kind === "array" || validator.$schema.kind === "object" || validator.$schema.kind === "map" || validator.$schema.kind === "set") {
     return void 0;
   }
   const DEFAULT_VALUE = value === null ? null : value ?? validator.$schema.default;
@@ -276,6 +364,7 @@ const getTypeFromParent = ({
 };
 const getInstance = (validator) => {
   switch (validator.$schema.kind) {
+    case "map":
     case "object":
       return Y.Map;
     case "set":
@@ -295,54 +384,65 @@ const propertyToNumber = (p) => {
   return p;
 };
 function setArrayToNull() {
-  this.isNull = true;
-  this.yType.delete(0, this.yType.length);
-  this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+  this.state.transaction(() => {
+    this.syncroStates.forEach((state) => state.destroy());
+    if (this instanceof SyncedSet) {
+      this.syncroStatesValues.clear();
+    }
+    this.syncroStates = [];
+    this.isNull = true;
+    this.yType.delete(0, this.yType.length);
+    this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+  });
 }
 const isArrayNull = ({ yType }) => {
   return yType.length === 1 && yType.get(0) instanceof Y.Text && yType.get(0).toString() === NULL_ARRAY;
 };
-function observeArray() {
-  return (e, _transaction) => {
-    if (_transaction.origin !== this.state.transactionKey) {
-      let start = 0;
-      e.delta.forEach(({ retain, delete: _delete, insert }) => {
-        if (retain) {
-          start += retain;
-        }
-        if (_delete) {
-          const deleted = this.syncroStates.splice(start, _delete);
-          deleted.forEach((state) => {
-            state.destroy();
-          });
-          start -= _delete;
-        }
-        if (Array.isArray(insert)) {
-          for (let i = 0; i < insert.length; i++) {
-            if (insert[i] instanceof Y.Text && insert[i].toString() === NULL_ARRAY) {
-              this.isNull = true;
-              return;
-            }
-            this.syncroStates.splice(
-              start,
-              0,
-              createSyncroState({
-                key: start,
-                validator: this.validator.$schema.shape,
-                parent: this,
-                state: this.state
-              })
-            );
-            start += 1;
-          }
-        }
-      });
-      if (this instanceof SyncedSet) {
-        this.syncroStatesValues.clear();
-        this.syncroStatesValues.add(this.syncroStates.map((state) => state.value));
-      }
+function observeArray(e, _transaction) {
+  if (_transaction.origin !== this.state.transactionKey) {
+    if (isArrayNull(this)) {
+      this.isNull = true;
+      return;
     }
-  };
+    let start = 0;
+    e.delta.forEach(({ retain, delete: _delete, insert }) => {
+      if (retain) {
+        start += retain;
+      }
+      if (_delete) {
+        const deleted = this.syncroStates.splice(start, _delete);
+        deleted.forEach((state) => {
+          state.destroy();
+        });
+        start -= _delete;
+      }
+      if (Array.isArray(insert)) {
+        for (let i = 0; i < insert.length; i++) {
+          if (insert[i] instanceof Y.Text && insert[i].toString() === NULL_ARRAY) {
+            this.isNull = true;
+            return;
+          }
+          this.syncroStates.splice(
+            start,
+            0,
+            createSyncroState({
+              key: start,
+              validator: this.validator.$schema.shape,
+              parent: this,
+              state: this.state
+            })
+          );
+          start += 1;
+        }
+      }
+    });
+    if (this instanceof SyncedSet) {
+      this.syncroStatesValues.clear();
+      this.syncroStates.map((state) => state.value).forEach((value) => {
+        this.syncroStatesValues.add(value);
+      });
+    }
+  }
 }
 class SyncedObject {
   state;
@@ -364,8 +464,8 @@ class SyncedObject {
     } else if (!syncroState2.validator.$schema.optional) {
       return true;
     }
-    this.yType.delete(p);
     syncroState2.destroy();
+    this.yType.delete(p);
     delete this.syncroStates[p];
     return true;
   };
@@ -393,9 +493,7 @@ class SyncedObject {
         }
         const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
         remainingStates.forEach((key) => {
-          this.syncroStates[key].destroy();
-          delete this.syncroStates[key];
-          this.yType.delete(key);
+          this.deleteProperty({}, key);
         });
         Object.entries(value).forEach(([key, value2]) => {
           if (key in shape) {
@@ -504,6 +602,10 @@ class SyncedObject {
   }
   observe = (e, _transaction) => {
     if (_transaction.origin !== this.state.transactionKey) {
+      if (this.yType.has(NULL_OBJECT)) {
+        this.isNull = true;
+        return;
+      }
       e.changes?.keys.forEach(({ action }, key) => {
         const syncedType = this.syncroStates[key];
         if (action === "delete" && syncedType) {
@@ -520,10 +622,6 @@ class SyncedObject {
           Object.assign(this.syncroStates, { [key]: syncroState2 });
         }
       });
-      if (this.yType.has(NULL_OBJECT)) {
-        this.isNull = true;
-        return;
-      }
     }
   };
   toJSON = () => {
@@ -656,7 +754,11 @@ class ObjectValidator {
       return null;
     }
     return Object.entries(this.$schema.shape).reduce((acc, [key, validator]) => {
-      Object.assign(acc, { [key]: validator.coerce(value[key]) });
+      const isValid = validator.isValid(value[key]);
+      if (!isValid) {
+        return acc;
+      }
+      Object.assign(acc, { [key]: value[key] });
       return acc;
     }, {});
   }
@@ -891,7 +993,12 @@ class SyncedArray {
   get array() {
     return this.syncroStates.map((state) => state.value);
   }
-  setNull = setArrayToNull.bind(this);
+  setNull = () => {
+    this.yType.delete(0, this.yType.length);
+    this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+    this.isNull = true;
+  };
+  // setNull = setArrayToNull.bind(this);
   deleteProperty = (target, prop) => {
     const index = propertyToNumber(prop);
     if (typeof index !== "number") {
@@ -1242,28 +1349,300 @@ class SyncedArray {
     this.yType.unobserve(this.observe);
   };
 }
+class Presence {
+  awareness;
+  id;
+  synced = false;
+  me;
+  others = [];
+  constructor({ doc, awareness }) {
+    this.awareness = awareness ?? new Awareness(doc);
+  }
+  setOthers = () => {
+    const users = Array.from(this.awareness.getStates().values());
+    this.others = users.filter((user) => user.id !== this.id).reduce(
+      (acc, user) => {
+        if (user[PRENSENCE_ID] && user[PRENSENCE_ID] !== this.id) {
+          acc.push(user[PRENSENCE]);
+        }
+        return acc;
+      },
+      []
+    );
+  };
+  init = ({ me = {}, awareness }) => {
+    if (awareness) {
+      this.awareness = awareness;
+    }
+    if (me.id && typeof me.id === "string") {
+      this.id = me.id;
+    }
+    this.me = me;
+    this.synced = true;
+    this.awareness.setLocalStateField(PRENSENCE_ID, this.id);
+    this.awareness.setLocalStateField(PRENSENCE, this.me);
+    this.setOthers();
+    this.awareness.on("update", this.setOthers);
+  };
+}
+class SyncedMap {
+  state;
+  validator;
+  yType;
+  parent;
+  key;
+  isNull = false;
+  syncroStates = new SvelteMap();
+  syncroStatesValues = new SvelteMap();
+  constructor(opts) {
+    this.key = opts.key;
+    this.state = opts.state;
+    this.yType = opts.yType;
+    this.parent = opts.parent;
+    this.validator = opts.validator;
+    this.sync(opts.value);
+    this.yType.observe(this.observe);
+  }
+  deleteProperty = (_target, p) => {
+    if (typeof p !== "string") {
+      return true;
+    }
+    const syncroState2 = this.syncroStates.get(p);
+    if (!syncroState2) {
+      return true;
+    }
+    syncroState2.destroy();
+    this.yType.delete(p);
+    this.syncroStates.delete(p);
+    this.syncroStatesValues.delete(p);
+    return true;
+  };
+  setNull() {
+    this.state.transaction(() => {
+      this.syncroStates.forEach((state) => state.destroy());
+      this.syncroStatesValues.clear();
+      this.syncroStates.clear();
+      this.isNull = true;
+      this.yType.set(NULL_OBJECT, new Y.Text(NULL_OBJECT));
+    });
+  }
+  observe = (e, _transaction) => {
+    if (_transaction.origin !== this.state.transactionKey) {
+      if (this.yType.has(NULL_OBJECT)) {
+        this.isNull = true;
+        this.syncroStates.forEach((state) => state.destroy());
+        this.syncroStates.clear();
+        this.syncroStatesValues.clear();
+        return;
+      }
+      e.changes?.keys.forEach(({ action }, key) => {
+        const syncedState = this.syncroStates.get(key);
+        if (action === "delete" && syncedState) {
+          syncedState.destroy();
+          this.syncroStates.delete(key);
+          this.syncroStatesValues.delete(key);
+        }
+        if (action === "add") {
+          const syncroState2 = createSyncroState({
+            key,
+            validator: this.validator.$schema.shape,
+            state: this.state,
+            parent: this
+          });
+          this.addState(key, syncroState2);
+        }
+      });
+    }
+  };
+  addState = (key, state) => {
+    this.syncroStates.set(key, state);
+    this.syncroStatesValues.set(key, state.value);
+  };
+  addValue = (key, value) => {
+    const state = createSyncroState({
+      key,
+      validator: this.validator.$schema.shape,
+      parent: this,
+      value,
+      state: this.state
+    });
+    this.addState(key, state);
+  };
+  sync = (value) => {
+    this.state.transaction(() => {
+      this.syncroStates.clear();
+      this.syncroStatesValues.clear();
+      if (this.yType.has(NULL_OBJECT)) {
+        this.isNull = true;
+        return;
+      }
+      if (value) {
+        Object.entries(value).forEach(([key, value2]) => {
+          this.addValue(key, value2);
+        });
+      } else if (this.state.initialized) {
+        this.yType.forEach((value2, key) => {
+          this.addValue(key, value2);
+        });
+      } else if (this.validator.$schema.default) {
+        this.validator.$schema.default.forEach((value2, key) => {
+          this.addValue(key, value2);
+        });
+      } else if (this.validator.$schema.nullable && !value) {
+        this.setNull();
+      }
+    });
+  };
+  toJSON = () => {
+    return Object.fromEntries(this.syncroStates.entries());
+  };
+  destroy = () => {
+    this.syncroStates.clear();
+    this.yType.unobserve(this.observe);
+  };
+  proxyMap = new Proxy(this.syncroStatesValues, {
+    get: (target, prop) => {
+      if (prop === "getState") {
+        return () => this.state;
+      }
+      if (prop === "getYType") {
+        return () => this.yType;
+      }
+      if (prop === "getYTypes") {
+        return () => Object.fromEntries(this.yType.entries());
+      }
+      if (prop === Symbol.iterator) {
+        return () => this.syncroStatesValues.entries();
+      }
+      const result = Reflect.get(target, prop);
+      if (typeof result === "function") {
+        return (...args) => {
+          if (typeof prop === "string") {
+            switch (prop) {
+              case "set": {
+                const [key, value] = args;
+                const { isValid, value: parsedValue } = this.validator.$schema.shape.parse(value);
+                console.log({ isValid, value: parsedValue });
+                if (!isValid) {
+                  return false;
+                }
+                const hasValue = this.syncroStates.has(value);
+                if (hasValue) {
+                  return false;
+                }
+                this.state.transaction(() => {
+                  const state = createSyncroState({
+                    forceNewType: true,
+                    key,
+                    validator: this.validator.$schema.shape,
+                    parent: this,
+                    value,
+                    state: this.state
+                  });
+                  this.addState(key, state);
+                });
+                return this.proxyMap;
+              }
+              case "delete": {
+                this.deleteProperty(target, args[0]);
+                return this.proxyMap;
+              }
+              case "clear":
+                {
+                  this.state.transaction(() => {
+                    this.syncroStates.forEach((state) => state.destroy());
+                    this.yType.clear();
+                    this.syncroStatesValues.clear();
+                    this.syncroStates.clear();
+                  });
+                }
+                return this.proxyMap;
+            }
+            return result.call(target, ...args);
+          }
+        };
+      } else {
+        return result;
+      }
+    }
+  });
+  get value() {
+    if (this.isNull) {
+      return null;
+    }
+    return this.proxyMap;
+  }
+  set value(input) {
+    const { isValid, value } = this.validator.parse(input);
+    this.state.transaction(() => {
+      if (!isValid) {
+        return;
+      } else {
+        if (!value) {
+          if (value === void 0) {
+            this.parent.deleteProperty({}, this.key);
+          } else {
+            this.setNull();
+          }
+        } else {
+          if (this.isNull) {
+            this.isNull = false;
+            this.yType.delete(NULL_OBJECT);
+          }
+          if (!this.isNull) {
+            const remainingStates = Array.from(this.syncroStates.keys()).filter((key) => !(key in value));
+            remainingStates.forEach((key) => {
+              this.deleteProperty({}, key);
+            });
+          }
+          Array.from(value.entries()).forEach(([key, value2]) => {
+            const state = this.syncroStates.get(key);
+            if (state) {
+              state.value = value2;
+              this.syncroStatesValues.set(key, value2);
+            } else {
+              const { isValid: isValid2, value: parsedValue } = this.validator.$schema.shape.parse(value2);
+              if (isValid2) {
+                this.addValue(key, parsedValue);
+              }
+            }
+          });
+        }
+      }
+    });
+  }
+}
 const safeSetContext = (key, value) => {
   try {
     setContext(key, value);
   } catch (e) {
   }
 };
-const syncroState = ({ schema, sync }) => {
-  const doc = new Y.Doc();
-  const awareness = new Awareness(doc);
+const syncroState = ({
+  schema,
+  sync,
+  doc: customDoc,
+  awareness: customAwareness,
+  presence: p
+}) => {
+  const doc = customDoc ?? new Y.Doc();
+  const awareness = customAwareness ?? new Awareness(doc);
+  const presence = new Presence({ doc, awareness });
   const schemaValidator = new ObjectValidator(schema);
   const stateMap = doc.getMap("$state");
   const undoManager = new Y.UndoManager(stateMap);
+  const transactionKey = new TRANSACTION_KEY();
   let state = {
     synced: sync ? false : true,
     initialized: false,
     awareness,
     doc,
     undoManager,
+    presence,
     transaction: (fn) => {
-      state.doc.transact(fn, TRANSACTION_KEY);
+      state.doc.transact(fn, transactionKey);
     },
-    transactionKey: TRANSACTION_KEY,
+    transactionKey,
     undo: () => {
       if (undoManager?.canUndo()) {
         undoManager.undo();
@@ -1292,7 +1671,6 @@ const syncroState = ({ schema, sync }) => {
   const initialize = (doc2, cb) => {
     const text = doc2.getText(INITIALIZED);
     const initialized = text?.toString() === INITIALIZED;
-    console.log({ initialized });
     Object.assign(doc2, { initialized });
     state.initialized = initialized;
     cb();
@@ -1303,10 +1681,11 @@ const syncroState = ({ schema, sync }) => {
       text.insert(0, INITIALIZED);
     }
   };
-  const synced = () => {
+  const synced = (provider) => {
     initialize(doc, () => {
       syncroStateProxy.sync(syncroStateProxy.value);
       stateMap.observe(syncroStateProxy.observe);
+      presence.init({ me: p, awareness: provider?.awareness });
       state.synced = true;
     });
   };
@@ -1370,6 +1749,16 @@ const createSyncroState = ({
     }
     case "array": {
       return new SyncedArray({
+        yType: type,
+        validator,
+        value,
+        parent,
+        key,
+        state
+      });
+    }
+    case "map": {
+      return new SyncedMap({
         yType: type,
         validator,
         value,
@@ -1807,6 +2196,68 @@ class SetValidator {
     };
   }
 }
+class MapValidator {
+  $schema;
+  constructor(shape) {
+    this.$schema = {
+      kind: "map",
+      optional: false,
+      nullable: false,
+      shape
+    };
+  }
+  isValidNullOrUndefined = isValidNullOrUndefined.bind(this);
+  isValid = (value) => {
+    if (value instanceof Map) {
+      return Array.from(value.values()).every((val) => {
+        return this.$schema.shape.isValid(val);
+      });
+    }
+    if (value === null) {
+      return this.$schema.nullable;
+    }
+    if (value === void 0) {
+      return this.$schema.optional;
+    }
+    return false;
+  };
+  optional() {
+    this.$schema.optional = true;
+    return this;
+  }
+  nullable() {
+    this.$schema.nullable = true;
+    return this;
+  }
+  default(value) {
+    if (value instanceof Map) {
+      this.$schema.default = value;
+    } else {
+      this.$schema.default = new Map(Object.entries(value));
+    }
+    return this;
+  }
+  coerce(value) {
+    if (value instanceof Map) {
+      const entries = Array.from(value.entries()).filter(
+        ([key, value2]) => this.$schema.shape.isValid(value2)
+      );
+      if (entries.length > 0) {
+        return new Map(entries);
+      }
+    }
+    if (value === null && this.$schema.nullable) {
+      return null;
+    }
+    return this.$schema.default || /* @__PURE__ */ new Set();
+  }
+  parse(value) {
+    return {
+      isValid: this.isValid(value),
+      value: this.coerce(value)
+    };
+  }
+}
 const y = {
   boolean: () => new BooleanValidator(),
   date: () => new DateValidator(),
@@ -1816,7 +2267,8 @@ const y = {
   object: (shape) => new ObjectValidator(shape),
   array: (shape) => new ArrayValidator(shape),
   number: () => new NumberValidator(),
-  set: (shape) => new SetValidator(shape)
+  set: (shape) => new SetValidator(shape),
+  map: (shape) => new MapValidator(shape)
 };
 function _page($$payload, $$props) {
   push();
@@ -1824,14 +2276,18 @@ function _page($$payload, $$props) {
   const client = createClient({
     publicApiKey: "pk_prod_ytItHgLSil9pFkJELGPI7yWptk_jNMifKfv3JhWODRGX2vK3hrt-3oNzDkrc1kcx"
   });
-  client.enterRoom("your-room-id-10");
+  const { room } = client.enterRoom("your-room-id-10");
   const document = syncroState({
-    // sync: async ({ doc, synced }) => {
-    // 	const yProvider = new LiveblocksYjsProvider(room, doc);
-    // 	yProvider.on('synced', () => {
-    // 		synced();
-    // 	});
-    // },
+    sync: async ({ doc, synced }) => {
+      const yProvider = new LiveblocksYjsProvider(room, doc);
+      yProvider.on("synced", () => {
+        synced(yProvider);
+      });
+    },
+    presence: {
+      name: "John",
+      id: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+    },
     schema: {
       name: y.string().default("Bob").optional(),
       firstName: y.string().default("Smith"),
@@ -1853,10 +2309,17 @@ function _page($$payload, $$props) {
       }).optional()
     }
   });
+  document.getState();
   JSON.stringify(document, null, 2);
   if (document.getState?.().synced) {
     $$payload.out += "<!--[-->";
-    $$payload.out += `<div class="grid grid-cols-2 gap-2 p-10"><div class="flex flex-col gap-4"><div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Basic Properties</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-primary">${escape_html(document.name)}</button> <button class="btn btn-primary">Update First Name</button> <button class="btn btn-secondary">Update Age</button> <button class="btn btn-secondary">Update Birthday</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Arrays</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-accent">Add Friend</button> <button class="btn btn-error">Remove Friend</button> <button class="btn btn-info">Add Family</button> <button class="btn btn-success">Add Todo</button> <button class="btn btn-warning">Toggle Last Todo</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Nested Objects</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-warning">Toggle Theme</button> <button class="btn btn-info">Update Bio</button> <button class="btn btn-accent">Toggle Notifications</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Utils</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-warning">Log nested $state</button></div></div></div> <div><div class="mockup-code p-2"><code><!---->`;
+    $$payload.out += `<div class="grid grid-cols-2 gap-2 p-10"><div class="flex flex-col gap-4"><div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Basic Properties</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-primary">${escape_html(document.name)}</button> <button class="btn btn-primary">Update First Name</button> <button class="btn btn-secondary">Update Age</button> <button class="btn btn-secondary">Update Birthday</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Arrays</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-accent">Add Friend</button> <button class="btn btn-error">Remove Friend</button> <button class="btn btn-info">Add Family</button> <button class="btn btn-success">Add Todo</button> <button class="btn btn-warning">Toggle Last Todo</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Nested Objects</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-warning">Toggle Theme</button> <button class="btn btn-info">Update Bio</button> <button class="btn btn-accent">Toggle Notifications</button></div></div> <div class="flex flex-col gap-2"><h3 class="text-lg font-bold">Utils</h3> <div class="grid grid-cols-2 gap-2"><button class="btn btn-warning">Log nested $state</button> <button class="btn btn-warning">Set Presence</button></div></div></div> <div><div class="mockup-code p-2"><code><!---->`;
+    {
+      $$payload.out += `<pre>						${escape_html(JSON.stringify(snapshot(document.getState().presence.me || []), null, 2))}
+						${escape_html(JSON.stringify(snapshot(document.getState().presence.others || []), null, 2))}
+						</pre>`;
+    }
+    $$payload.out += `<!----></code></div> <div class="mockup-code p-2"><code><!---->`;
     {
       $$payload.out += `<pre>es</pre>`;
     }

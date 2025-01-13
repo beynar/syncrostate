@@ -22,6 +22,9 @@ import type { ArrayValidator } from '../schemas/array.js';
 import type { SyncedContainer } from './common.js';
 import { SyncedSet } from './set.svelte.js';
 import type { SetValidator } from '../schemas/set.js';
+import { Presence, type PresenceUser } from '$lib/presence.svelte.js';
+import { SyncedMap } from './map.svelte.js';
+import type { MapValidator } from '$lib/schemas/map.js';
 
 export type SyncroStates =
 	| SyncedText
@@ -31,7 +34,8 @@ export type SyncroStates =
 	| SyncedEnum
 	| SyncedObject
 	| SyncedArray
-	| SyncedSet;
+	| SyncedSet
+	| SyncedMap;
 
 // For testing purpose
 const safeSetContext = (key: string, value: any) => {
@@ -42,7 +46,7 @@ const safeSetContext = (key: string, value: any) => {
 	}
 };
 
-export type State = {
+export type State<P extends ObjectShape = ObjectShape> = {
 	synced: boolean;
 	awareness: Awareness;
 	doc: Y.Doc;
@@ -50,19 +54,22 @@ export type State = {
 	initialized: boolean;
 	transaction: (fn: () => void) => void;
 	transactionKey: any;
+	presence: Presence<P>;
 	undo: () => void;
 	redo: () => void;
 };
 
-export const syncroState = <T extends ObjectShape>({
+export const syncroState = <T extends ObjectShape, P extends ObjectShape>({
 	schema,
 	sync,
 	doc: customDoc,
-	awareness: customAwareness
+	awareness: customAwareness,
+	presence: p
 }: {
 	schema: T;
 	doc?: Y.Doc;
 	awareness?: Awareness;
+	presence?: Omit<PresenceUser, '$/_PRENSENCE_ID_/$'>;
 	sync?: ({
 		doc,
 		awareness,
@@ -70,11 +77,12 @@ export const syncroState = <T extends ObjectShape>({
 	}: {
 		doc: Y.Doc;
 		awareness: Awareness;
-		synced: () => void;
+		synced: (provider?: any) => void;
 	}) => Promise<void>;
 }): SchemaOutput<T> => {
 	const doc = customDoc ?? new Y.Doc();
 	const awareness = customAwareness ?? new Awareness(doc);
+	const presence = new Presence({ doc, awareness });
 	const schemaValidator = new ObjectValidator(schema);
 	const stateMap = doc.getMap('$state');
 	const undoManager = new Y.UndoManager(stateMap);
@@ -85,6 +93,7 @@ export const syncroState = <T extends ObjectShape>({
 		awareness,
 		doc,
 		undoManager,
+		presence: presence as Presence<P>,
 		transaction: (fn: () => void) => {
 			state.doc.transact(fn, transactionKey);
 		},
@@ -120,9 +129,7 @@ export const syncroState = <T extends ObjectShape>({
 
 	const initialize = (doc: Y.Doc, cb: () => void) => {
 		const text = doc.getText(INITIALIZED);
-
 		const initialized = text?.toString() === INITIALIZED;
-		console.log({ initialized });
 		Object.assign(doc, { initialized });
 		state.initialized = initialized;
 		cb();
@@ -134,20 +141,24 @@ export const syncroState = <T extends ObjectShape>({
 		}
 	};
 
-	const synced = () => {
+	const synced = (provider?: any) => {
 		initialize(doc, () => {
 			syncroStateProxy.sync(syncroStateProxy.value);
 			stateMap.observe(syncroStateProxy.observe);
+			presence.init({ me: p, awareness: provider?.awareness });
 			state.synced = true;
 		});
 	};
+
 	if (!sync) {
 		synced();
-	} else {
-		onMount(() => {
-			sync({ doc, awareness, synced });
-		});
 	}
+
+	onMount(() => {
+		if (sync) {
+			sync({ doc, awareness, synced });
+		}
+	});
 
 	return syncroStateProxy.value;
 };
@@ -241,6 +252,16 @@ export const createSyncroState = ({
 			return new SyncedArray({
 				yType: type as Y.Array<any>,
 				validator: validator as ArrayValidator<any>,
+				value,
+				parent,
+				key,
+				state
+			});
+		}
+		case 'map': {
+			return new SyncedMap({
+				yType: type as Y.Map<any>,
+				validator: validator as MapValidator<any>,
 				value,
 				parent,
 				key,
