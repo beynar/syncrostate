@@ -1,7 +1,7 @@
 import { type BaseSchema, isValidNullOrUndefined } from './base.js';
 import type { InferSchemaType, SchemaOutput, Validator } from './schema.js';
 
-export type MapSchema<T extends Validator> = BaseSchema<any> & {
+export type MapSchema<T extends Validator> = BaseSchema<Map<string, InferSchemaType<T>>> & {
 	kind: 'map';
 	shape: T;
 };
@@ -71,7 +71,7 @@ export class MapValidator<
 			return null;
 		}
 
-		return this.$schema.default || new Set();
+		return this.$schema.default || new Map();
 	}
 
 	parse(value: any): { isValid: boolean; value: Map<string, InferSchemaType<T>> | null } {

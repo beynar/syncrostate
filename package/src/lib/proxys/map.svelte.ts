@@ -124,7 +124,7 @@ export class SyncedMap {
 					this.addValue(key, value);
 				});
 			} else if (this.validator.$schema.default) {
-				this.validator.$schema.default.forEach((value, key) => {
+				this.validator.$schema.default?.forEach((value, key) => {
 					this.addValue(key, value);
 				});
 			} else if (this.validator.$schema.nullable && !value) {
