@@ -1,10 +1,9 @@
 import * as Y from 'yjs';
 import { SvelteSet } from 'svelte/reactivity';
-
 import { isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
 import { createSyncroState, type State, type SyncroStates } from './syncroState.svelte.js';
 import type { SyncedContainer } from './common.js';
-import type { SetValidator } from '$lib/schemas/set.js';
+import type { SetValidator } from '../schemas/set.js';
 
 export class SyncedSet {
 	state: State;
@@ -191,55 +190,59 @@ export class SyncedSet {
 
 	set value(input: Set<any> | null) {
 		const { isValid, value } = this.validator.parse(input);
-		console.log({ value, isValid });
-		if (!isValid) {
-			logError('Invalid value', { value });
-			return;
-		} else {
-			if (!value) {
-				if (value === undefined) {
-					// this.parent.deleteProperty({}, this.key);
-				} else {
-					this.setNull();
-				}
+
+		this.state.transaction(() => {
+			if (!isValid) {
+				logError('Invalid value', { value });
+				return;
 			} else {
-				this.syncroStatesValues.clear();
-				const valueArray = Array.from(value);
-
-				if (this.isNull) {
-					this.isNull = false;
-					this.yType.delete(0, this.yType.length);
-				}
-				if (!this.isNull) {
-					const remainingStates = Array.from(this.syncroStates).slice(valueArray.length);
-					remainingStates.forEach((state) => {
-						state.destroy();
-					});
-					if (remainingStates.length) {
-						this.yType.delete(valueArray.length, remainingStates.length);
-					}
-				}
-
-				this.syncroStates = valueArray.map((item, index) => {
-					const previsousState = this.syncroStates[index];
-					if (previsousState) {
-						previsousState.value = item;
-						this.syncroStatesValues.add(previsousState.value);
-						return previsousState;
+				if (!value) {
+					if (value === undefined) {
+						// this.parent.deleteProperty({}, this.key);
 					} else {
-						const state = createSyncroState({
-							forceNewType: true,
-							key: index,
-							validator: this.validator.$schema.shape,
-							parent: this,
-							value: item,
-							state: this.state
-						});
-						this.syncroStatesValues.add(state.value);
-						return state;
+						this.setNull();
 					}
-				});
+				} else {
+					this.syncroStatesValues.clear();
+					const valueArray = Array.from(value);
+
+					if (this.isNull) {
+						this.isNull = false;
+						this.yType.delete(0, this.yType.length);
+					}
+
+					if (!this.isNull) {
+						const remainingStates = Array.from(this.syncroStates).slice(valueArray.length);
+						remainingStates.forEach((state) => {
+							state.destroy();
+						});
+						if (remainingStates.length) {
+							this.yType.delete(valueArray.length, remainingStates.length);
+						}
+					}
+
+					this.syncroStates = valueArray.map((item, index) => {
+						const previsousState = this.syncroStates[index];
+						if (previsousState) {
+							previsousState.value = item;
+							console.log('state', previsousState.value);
+							this.syncroStatesValues.add(previsousState.value);
+							return previsousState;
+						} else {
+							const state = createSyncroState({
+								forceNewType: true,
+								key: index,
+								validator: this.validator.$schema.shape,
+								parent: this,
+								value: item,
+								state: this.state
+							});
+							this.syncroStatesValues.add(state.value);
+							return state;
+						}
+					});
+				}
 			}
-		}
+		});
 	}
 }

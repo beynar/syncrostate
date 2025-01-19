@@ -1,5 +1,15 @@
 export type BaseSchema<T> = {
-	kind: 'array' | 'object' | 'string' | 'boolean' | 'number' | 'enum' | 'date' | 'richText' | 'set';
+	kind:
+		| 'array'
+		| 'object'
+		| 'string'
+		| 'boolean'
+		| 'number'
+		| 'enum'
+		| 'date'
+		| 'richText'
+		| 'set'
+		| 'map';
 	optional: boolean;
 	nullable: boolean;
 	default?: T;

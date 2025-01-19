@@ -39,7 +39,7 @@ export class SetValidator<
 		} else {
 			this.$schema.default = new Set(value);
 		}
-		return this as SetValidator<T, O, true>;
+		return this as SetValidator<T, O, N>;
 	}
 
 	isValid = (value: any): value is Set<SetType<T>> => {

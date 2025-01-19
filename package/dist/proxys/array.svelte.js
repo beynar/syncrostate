@@ -1,6 +1,7 @@
 import * as Y from 'yjs';
 import { createSyncroState } from './syncroState.svelte.js';
 import { isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
+import { NULL_ARRAY } from '../constants.js';
 export class SyncedArray {
     state;
     validator;
@@ -16,7 +17,12 @@ export class SyncedArray {
     get array() {
         return this.syncroStates.map((state) => state.value);
     }
-    setNull = setArrayToNull.bind(this);
+    setNull = () => {
+        this.yType.delete(0, this.yType.length);
+        this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+        this.isNull = true;
+    };
+    // setNull = setArrayToNull.bind(this);
     deleteProperty = (target, prop) => {
         const index = propertyToNumber(prop);
         if (typeof index !== 'number') {

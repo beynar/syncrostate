@@ -82,6 +82,7 @@
     "isEntry": true,
     "imports": [
       "_escaping.js",
+      "_utils.js",
       "_index.js"
     ],
     "css": [

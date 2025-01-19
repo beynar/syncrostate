@@ -4,6 +4,7 @@ import { createSyncroState, type State, type SyncroStates } from './syncroState.
 import type { SyncedContainer } from './common.js';
 
 import { isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
+import { NULL_ARRAY } from '$lib/constants.js';
 
 export class SyncedArray<T extends any = any> {
 	state: State;
@@ -22,7 +23,12 @@ export class SyncedArray<T extends any = any> {
 	private get array() {
 		return this.syncroStates.map((state) => state.value);
 	}
-	setNull = setArrayToNull.bind(this);
+	setNull = () => {
+		this.yType.delete(0, this.yType.length);
+		this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+		this.isNull = true;
+	};
+	// setNull = setArrayToNull.bind(this);
 
 	deleteProperty = (target: any, prop: any) => {
 		const index = propertyToNumber(prop);

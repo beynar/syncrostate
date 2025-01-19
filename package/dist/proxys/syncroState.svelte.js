@@ -12,6 +12,8 @@ import { onMount, setContext } from 'svelte';
 import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '../constants.js';
 import { SyncedArray } from './array.svelte.js';
 import { SyncedSet } from './set.svelte.js';
+import { Presence } from '../presence.svelte.js';
+import { SyncedMap } from './map.svelte.js';
 // For testing purpose
 const safeSetContext = (key, value) => {
     try {
@@ -21,22 +23,25 @@ const safeSetContext = (key, value) => {
         //
     }
 };
-export const syncroState = ({ schema, sync }) => {
-    const doc = new Y.Doc();
-    const awareness = new Awareness(doc);
+export const syncroState = ({ schema, sync, doc: customDoc, awareness: customAwareness, presence: p }) => {
+    const doc = customDoc ?? new Y.Doc();
+    const awareness = customAwareness ?? new Awareness(doc);
+    const presence = new Presence({ doc, awareness });
     const schemaValidator = new ObjectValidator(schema);
     const stateMap = doc.getMap('$state');
     const undoManager = new Y.UndoManager(stateMap);
+    const transactionKey = new TRANSACTION_KEY();
     let state = $state({
         synced: sync ? false : true,
         initialized: false,
         awareness,
         doc,
         undoManager,
+        presence: presence,
         transaction: (fn) => {
-            state.doc.transact(fn, TRANSACTION_KEY);
+            state.doc.transact(fn, transactionKey);
         },
-        transactionKey: TRANSACTION_KEY,
+        transactionKey,
         undo: () => {
             if (undoManager?.canUndo()) {
                 undoManager.undo();
@@ -67,7 +72,6 @@ export const syncroState = ({ schema, sync }) => {
     const initialize = (doc, cb) => {
         const text = doc.getText(INITIALIZED);
         const initialized = text?.toString() === INITIALIZED;
-        console.log({ initialized });
         Object.assign(doc, { initialized });
         state.initialized = initialized;
         cb();
@@ -78,21 +82,22 @@ export const syncroState = ({ schema, sync }) => {
             text.insert(0, INITIALIZED);
         }
     };
-    const synced = () => {
+    const synced = (provider) => {
         initialize(doc, () => {
             syncroStateProxy.sync(syncroStateProxy.value);
             stateMap.observe(syncroStateProxy.observe);
+            presence.init({ me: p, awareness: provider?.awareness });
             state.synced = true;
         });
     };
     if (!sync) {
         synced();
     }
-    else {
-        onMount(() => {
+    onMount(() => {
+        if (sync) {
             sync({ doc, awareness, synced });
-        });
-    }
+        }
+    });
     return syncroStateProxy.value;
 };
 export const createSyncroState = ({ key, validator, forceNewType, value, parent, state }) => {
@@ -167,6 +172,16 @@ export const createSyncroState = ({ key, validator, forceNewType, value, parent,
         }
         case 'array': {
             return new SyncedArray({
+                yType: type,
+                validator: validator,
+                value,
+                parent,
+                key,
+                state
+            });
+        }
+        case 'map': {
+            return new SyncedMap({
                 yType: type,
                 validator: validator,
                 value,
