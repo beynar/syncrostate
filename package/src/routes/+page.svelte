@@ -28,12 +28,12 @@
 	});
 
 	const document = syncroState({
-		sync: async ({ doc, synced }) => {
-			const yProvider = new LiveblocksYjsProvider(room, doc);
-			yProvider.on('synced', () => {
-				synced(yProvider);
-			});
-		},
+		// sync: async ({ doc, synced }) => {
+		// 	const yProvider = new LiveblocksYjsProvider(room, doc);
+		// 	yProvider.on('synced', () => {
+		// 		synced(yProvider);
+		// 	});
+		// },
 		presence: {
 			name: 'John',
 			id: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
@@ -148,7 +148,7 @@
 	const logNestedState = () => {
 		console.log({
 			family: {
-				state: document.family.getState?.(),
+				state: document.family.getState?.().doc.toJSON(),
 				yType: document.family.getYType?.(),
 				yTypes: document.family.getYTypes?.()
 			},
@@ -167,6 +167,25 @@
 	};
 
 	const json = $derived(JSON.stringify(document, null, 2));
+
+	const schemaLessDocument = syncroState({
+		defaultValue: {
+			name: 'John'
+		} as { name: string; age?: number | 'string' }
+	});
+	schemaLessDocument.age = 25;
+	console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	schemaLessDocument.age = '25';
+	console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	schemaLessDocument.age = true;
+	console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	schemaLessDocument.age = new Date();
+	console.log(Object.keys(schemaLessDocument));
+	console.log({
+		document: {
+			state: schemaLessDocument.getState?.().doc.toJSON()
+		}
+	});
 </script>
 
 {#if document.getState?.().synced}

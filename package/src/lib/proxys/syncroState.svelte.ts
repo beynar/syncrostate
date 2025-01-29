@@ -59,16 +59,10 @@ export type State<P extends ObjectShape = ObjectShape> = {
 	redo: () => void;
 };
 
-export const syncroState = <T extends ObjectShape, P extends ObjectShape>({
-	schema,
-	sync,
-	doc: customDoc,
-	awareness: customAwareness,
-	presence: p
-}: {
-	schema: T;
+type SyncroStateOpts = {
 	doc?: Y.Doc;
 	awareness?: Awareness;
+	map?: Y.Map<any>;
 	presence?: Omit<PresenceUser, '$/_PRENSENCE_ID_/$'>;
 	sync?: ({
 		doc,
@@ -79,12 +73,33 @@ export const syncroState = <T extends ObjectShape, P extends ObjectShape>({
 		awareness: Awareness;
 		synced: (provider?: any) => void;
 	}) => Promise<void>;
-}): SchemaOutput<T> => {
-	const doc = customDoc ?? new Y.Doc();
+} & (
+	| {
+			schema: ObjectShape;
+			defaultValue?: never;
+	  }
+	| {
+			defaultValue: Record<string, any>;
+			schema?: never;
+	  }
+);
+
+export const syncroState = <Opts extends SyncroStateOpts, P extends ObjectShape>({
+	schema,
+	sync,
+	defaultValue,
+	map: customMap,
+	doc: customDoc,
+	awareness: customAwareness,
+	presence: p
+}: Opts): Opts extends { schema: ObjectShape }
+	? SchemaOutput<Opts['schema']>
+	: Opts['defaultValue'] => {
+	const doc = customDoc ? customDoc : customMap?.doc ? customMap.doc : new Y.Doc();
 	const awareness = customAwareness ?? new Awareness(doc);
 	const presence = new Presence({ doc, awareness });
-	const schemaValidator = new ObjectValidator(schema);
-	const stateMap = doc.getMap('$state');
+	const stateMap = customMap ?? doc.getMap('$state');
+	const schemaValidator = schema ? new ObjectValidator(schema) : undefined;
 	const undoManager = new Y.UndoManager(stateMap);
 	const transactionKey = new TRANSACTION_KEY();
 	let state = $state<State>({
@@ -120,6 +135,7 @@ export const syncroState = <T extends ObjectShape, P extends ObjectShape>({
 				return true;
 			}
 		},
+		value: defaultValue,
 		state,
 		key: '$state',
 		validator: schemaValidator,
@@ -143,7 +159,7 @@ export const syncroState = <T extends ObjectShape, P extends ObjectShape>({
 
 	const synced = (provider?: any) => {
 		initialize(doc, () => {
-			syncroStateProxy.sync(syncroStateProxy.value);
+			syncroStateProxy.sync(schema ? syncroStateProxy.value : defaultValue);
 			stateMap.observe(syncroStateProxy.observe);
 			presence.init({ me: p, awareness: provider?.awareness });
 			state.synced = true;
@@ -169,58 +185,88 @@ export const createSyncroState = ({
 	forceNewType,
 	value,
 	parent,
+	type,
 	state
 }: {
 	key: string | number;
-	validator: Validator;
 	value?: any;
 	forceNewType?: boolean;
 	parent: SyncedContainer;
 	state: State;
+	type?: 'array' | 'set' | 'map' | 'object' | 'string' | 'number' | 'boolean' | 'date' | 'enum';
+	validator?: Validator;
 }): SyncroStates => {
-	const type = getTypeFromParent({ forceNewType, parent: parent.yType, key, validator, value });
+	console.log(2, {
+		value,
+		type,
+		key,
+		validator,
+		forceNewType
+	});
+	const yType = getTypeFromParent({
+		forceNewType,
+		parent: parent.yType,
+		key,
+		validator,
+		value,
+		type
+	});
 
-	switch (validator.$schema.kind) {
+	console.log(4, {
+		value,
+		type,
+		key,
+		validator,
+		forceNewType,
+		yTypeValue: yType.toJSON()
+	});
+
+	switch (validator?.$schema.kind || type) {
 		default:
 		case 'string': {
 			return new SyncedText({
-				yType: type as Y.Text,
+				yType: yType as Y.Text,
 				validator: validator as StringValidator,
 				parent,
 				key,
-				state
+				state,
+				type
 			});
 		}
 		case 'number': {
 			return new SyncedNumber({
-				yType: type as Y.Text,
+				yType: yType as Y.Text,
 				validator: validator as NumberValidator,
 				parent,
 				key,
-				state
+				state,
+				type
 			});
 		}
 		case 'boolean': {
 			return new SyncedBoolean({
-				yType: type as Y.Text,
+				yType: yType as Y.Text,
 				validator: validator as BooleanValidator,
 				parent,
 				key,
-				state
+				state,
+				type
 			});
 		}
 		case 'date': {
+			console.log('new date');
 			return new SyncedDate({
-				yType: type as Y.Text,
+				yType: yType as Y.Text,
 				validator: validator as DateValidator,
 				parent,
 				key,
-				state
+				state,
+				type
 			});
 		}
 		case 'enum': {
 			return new SyncedEnum({
-				yType: type as Y.Text,
+				yType: yType as Y.Text,
 				validator: validator as EnumValidator<any, any, any>,
 				parent,
 				key,
@@ -229,7 +275,7 @@ export const createSyncroState = ({
 		}
 		case 'object': {
 			return new SyncedObject({
-				yType: type as Y.Map<any>,
+				yType: yType as Y.Map<any>,
 				validator: validator as ObjectValidator<any>,
 				baseImplementation: {},
 				value,
@@ -240,7 +286,7 @@ export const createSyncroState = ({
 		}
 		case 'set': {
 			return new SyncedSet({
-				yType: type as Y.Array<any>,
+				yType: yType as Y.Array<any>,
 				validator: validator as SetValidator<any>,
 				value,
 				parent,
@@ -250,7 +296,7 @@ export const createSyncroState = ({
 		}
 		case 'array': {
 			return new SyncedArray({
-				yType: type as Y.Array<any>,
+				yType: yType as Y.Array<any>,
 				validator: validator as ArrayValidator<any>,
 				value,
 				parent,
@@ -260,7 +306,7 @@ export const createSyncroState = ({
 		}
 		case 'map': {
 			return new SyncedMap({
-				yType: type as Y.Map<any>,
+				yType: yType as Y.Map<any>,
 				validator: validator as MapValidator<any>,
 				value,
 				parent,
