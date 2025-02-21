@@ -51,7 +51,7 @@ export class MapValidator {
         if (value === null && this.$schema.nullable) {
             return null;
         }
-        return this.$schema.default || new Set();
+        return this.$schema.default || new Map();
     }
     parse(value) {
         return {

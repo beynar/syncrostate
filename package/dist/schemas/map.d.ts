@@ -1,6 +1,6 @@
 import { type BaseSchema } from './base.js';
 import type { InferSchemaType, Validator } from './schema.js';
-export type MapSchema<T extends Validator> = BaseSchema<any> & {
+export type MapSchema<T extends Validator> = BaseSchema<Map<string, InferSchemaType<T>>> & {
     kind: 'map';
     shape: T;
 };

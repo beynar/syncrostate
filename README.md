@@ -1,3 +1,14 @@
+<div align="center">
+
+[![npm version](https://badge.fury.io/js/syncrostate.svg)](https://badge.fury.io/js/syncrostate)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](http://makeapullrequest.com)
+[![Svelte v5](https://img.shields.io/badge/Svelte-v5-FF3E00.svg)](https://svelte.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://www.typescriptlang.org/)
+[![Bundle size](https://deno.bundlejs.com/badge?q=syncrostate@latest&config=%7B%22esbuild%22:%7B%22external%22:%5B%22svelte%22,%22clsx%22%5D%7D%7D)](https://deno.bundlejs.com/badge?q=syncrostate@latest&config=%7B%22esbuild%22:%7B%22external%22:%5B%22svelte%22,%22clsx%22%5D%7D%7D)
+
+</div>
+
 # SyncroState
 
 SyncroState brings Svelte 5 reactivity to the multiplayer level. Built on top of Yjs, it provides a reactive and type-safe way to build multiplayer experiences.
