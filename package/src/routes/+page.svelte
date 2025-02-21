@@ -6,14 +6,9 @@
 	import javascript from 'highlight.js/lib/languages/json';
 	import { createClient } from '@liveblocks/client';
 	import { onMount } from 'svelte';
-	import { LiveblocksYjsProvider } from '@liveblocks/yjs';
+	import { Inspect } from 'svelte-inspect-value';
 
 	hljs.registerLanguage('javascript', javascript);
-
-	const highlight = (node: HTMLElement, json: string) => {
-		const highlighted = hljs.highlight(json, { language: 'json' }).value;
-		node.innerHTML = highlighted;
-	};
 
 	const client = createClient({
 		publicApiKey: 'pk_prod_ytItHgLSil9pFkJELGPI7yWptk_jNMifKfv3JhWODRGX2vK3hrt-3oNzDkrc1kcx'
@@ -65,8 +60,6 @@
 	});
 
 	const docState = document.getState!();
-
-	let friends = $state(['John']);
 
 	const updateName = () => {
 		document.name = 'Alice' + Math.floor(Math.random() * 100);
@@ -168,24 +161,24 @@
 
 	const json = $derived(JSON.stringify(document, null, 2));
 
-	const schemaLessDocument = syncroState({
-		defaultValue: {
-			name: 'John'
-		} as { name: string; age?: number | 'string' }
-	});
-	schemaLessDocument.age = 25;
-	console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
-	schemaLessDocument.age = '25';
-	console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
-	schemaLessDocument.age = true;
-	console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
-	schemaLessDocument.age = new Date();
-	console.log(Object.keys(schemaLessDocument));
-	console.log({
-		document: {
-			state: schemaLessDocument.getState?.().doc.toJSON()
-		}
-	});
+	// const schemaLessDocument = syncroState({
+	// 	defaultValue: {
+	// 		name: 'John'
+	// 	} as { name: string; age?: number | 'string' }
+	// });
+	// schemaLessDocument.age = 25;
+	// console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	// schemaLessDocument.age = '25';
+	// console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	// schemaLessDocument.age = true;
+	// console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	// schemaLessDocument.age = new Date();
+	// console.log(Object.keys(schemaLessDocument));
+	// console.log({
+	// 	document: {
+	// 		state: schemaLessDocument.getState?.().doc.toJSON()
+	// 	}
+	// });
 </script>
 
 {#if document.getState?.().synced}
@@ -240,11 +233,7 @@
 				</code>
 			</div>
 			<div class="mockup-code p-2">
-				<code>
-					{#key json}
-						<pre use:highlight={json}>es</pre>
-					{/key}
-				</code>
+				<Inspect value={document} />
 			</div>
 		</div>
 	</div>

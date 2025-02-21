@@ -12,9 +12,20 @@ const state = syncroState({
 	doc
 });
 
+const copyState = syncroState({
+	defaultValue: {
+		hello: 'world'
+	} as {
+		hello: string | number | boolean | Date;
+	},
+	doc
+});
+
 describe('SyncroState', () => {
 	it('should be initialized with the default value', () => {
 		expect(state.hello).toBe('world');
+		console.log(copyState.hello);
+		expect(copyState.hello).toBe('world');
 	});
 
 	it('should set the value', () => {

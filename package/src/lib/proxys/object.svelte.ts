@@ -309,18 +309,30 @@ export class SyncedObject {
 						});
 					}
 				);
-			} else if (!this.state.initialized) {
-				// Handle the case where the object is schemaless and we want to apply default value
-				Object.entries(value).forEach(([key, value]) => {
-					console.log({ value, key });
-					this.syncroStates[key] = createSyncroState({
-						key,
-						parent: this,
-						state: this.state,
-						value,
-						type: getTypeOfValue(value)
+			} else {
+				if (!this.state.initialized) {
+					// Handle the case where the object is schemaless and we want to apply default value
+					Object.entries(value).forEach(([key, value]) => {
+						console.log({ value, key });
+						this.syncroStates[key] = createSyncroState({
+							key,
+							parent: this,
+							state: this.state,
+							value,
+							type: getTypeOfValue(value)
+						});
 					});
-				});
+				} else {
+					this.yType.forEach((yType, key) => {
+						this.syncroStates[key] = createSyncroState({
+							key,
+							parent: this,
+							value: value?.[key] || this.validator!.$schema.default?.[key],
+							state: this.state,
+							type: getTypeFromYType(yType)
+						});
+					});
+				}
 			}
 		});
 	};
