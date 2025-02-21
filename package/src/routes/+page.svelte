@@ -4,15 +4,11 @@
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.css';
 	import javascript from 'highlight.js/lib/languages/json';
-	import { LiveblocksYjsProvider } from '@liveblocks/yjs';
 	import { createClient } from '@liveblocks/client';
 	import { onMount } from 'svelte';
-	hljs.registerLanguage('javascript', javascript);
+	import { Inspect } from 'svelte-inspect-value';
 
-	const highlight = (node: HTMLElement, json: string) => {
-		const highlighted = hljs.highlight(json, { language: 'json' }).value;
-		node.innerHTML = highlighted;
-	};
+	hljs.registerLanguage('javascript', javascript);
 
 	const client = createClient({
 		publicApiKey: 'pk_prod_ytItHgLSil9pFkJELGPI7yWptk_jNMifKfv3JhWODRGX2vK3hrt-3oNzDkrc1kcx'
@@ -25,13 +21,18 @@
 			room.disconnect();
 		};
 	});
+
 	const document = syncroState({
 		// sync: async ({ doc, synced }) => {
 		// 	const yProvider = new LiveblocksYjsProvider(room, doc);
 		// 	yProvider.on('synced', () => {
-		// 		synced();
+		// 		synced(yProvider);
 		// 	});
 		// },
+		presence: {
+			name: 'John',
+			id: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+		},
 		schema: {
 			name: y.string().default('Bob').optional(),
 			firstName: y.string().default('Smith'),
@@ -58,7 +59,7 @@
 		}
 	});
 
-	let friends = $state(['John']);
+	const docState = document.getState!();
 
 	const updateName = () => {
 		document.name = 'Alice' + Math.floor(Math.random() * 100);
@@ -138,10 +139,9 @@
 	}
 
 	const logNestedState = () => {
-		const t = document.getYTypes!().age;
 		console.log({
 			family: {
-				state: document.family.getState?.(),
+				state: document.family.getState?.().doc.toJSON(),
 				yType: document.family.getYType?.(),
 				yTypes: document.family.getYTypes?.()
 			},
@@ -152,8 +152,33 @@
 			}
 		});
 	};
+	const setPresence = () => {
+		docState.presence.me = {
+			id: '123',
+			name: docState.presence.me?.name === 'John' ? 'Alice' : 'John'
+		};
+	};
 
 	const json = $derived(JSON.stringify(document, null, 2));
+
+	// const schemaLessDocument = syncroState({
+	// 	defaultValue: {
+	// 		name: 'John'
+	// 	} as { name: string; age?: number | 'string' }
+	// });
+	// schemaLessDocument.age = 25;
+	// console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	// schemaLessDocument.age = '25';
+	// console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	// schemaLessDocument.age = true;
+	// console.table(JSON.parse(JSON.stringify(schemaLessDocument)));
+	// schemaLessDocument.age = new Date();
+	// console.log(Object.keys(schemaLessDocument));
+	// console.log({
+	// 	document: {
+	// 		state: schemaLessDocument.getState?.().doc.toJSON()
+	// 	}
+	// });
 </script>
 
 {#if document.getState?.().synced}
@@ -192,16 +217,23 @@
 				<h3 class="text-lg font-bold">Utils</h3>
 				<div class="grid grid-cols-2 gap-2">
 					<button class="btn btn-warning" onclick={logNestedState}>Log nested $state</button>
+					<button class="btn btn-warning" onclick={setPresence}>Set Presence</button>
 				</div>
 			</div>
 		</div>
 		<div class="">
 			<div class="mockup-code p-2">
 				<code>
-					{#key json}
-						<pre use:highlight={json}>es</pre>
+					{#key document.getState?.().presence.others}
+						<pre>
+						{JSON.stringify($state.snapshot(document.getState!().presence.me || []), null, 2)}
+						{JSON.stringify($state.snapshot(document.getState!().presence.others || []), null, 2)}
+						</pre>
 					{/key}
 				</code>
+			</div>
+			<div class="mockup-code p-2">
+				<Inspect value={document} />
 			</div>
 		</div>
 	</div>

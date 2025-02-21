@@ -5,8 +5,13 @@ export default defineConfig({
 	plugins: [sveltekit()],
 
 	test: {
-		// include: ['src/tests/**/set.proxy.{test,spec}.{js,ts}', 'src/tests/**/set.{test,spec}.{js,ts}'],
-		include: ['src/tests/**/*.{test,spec}.{js,ts}'],
+		// include: [
+		// 	'src/tests/**/map.proxy.{test,spec}.{js,ts}',
+		// 	'src/tests/**/map.{test,spec}.{js,ts}',
+		// 	'src/tests/**/syncroState.{test,spec}.{js,ts}'
+		// ],
+		include: ['src/tests/**/schemaLessDocument.{test,spec}.{js,ts}'],
+		// include: ['src/tests/**/*.{test,spec}.{js,ts}'],
 		coverage: {
 			provider: 'v8',
 			enabled: true,

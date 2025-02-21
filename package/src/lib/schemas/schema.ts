@@ -11,6 +11,7 @@ import { NumberValidator, type NumberSchema } from './number.js';
 import { SetValidator, type SetSchema } from './set.js';
 import type { State } from '$lib/proxys/syncroState.svelte.js';
 import type { Array as YArray, Map as YMap, AbstractType, Text as YText } from 'yjs';
+import { MapValidator, type MapSchema } from './map.js';
 
 export type Schema =
 	| ArraySchema<any>
@@ -21,14 +22,16 @@ export type Schema =
 	| NumberSchema
 	// | RichTextSchema
 	| EnumSchema<any>
-	| SetSchema<any>;
+	| SetSchema<any>
+	| MapSchema<any>;
 
 export type PrimitiveValidator = BaseValidator<Schema, boolean, boolean>;
 export type Validator =
 	| PrimitiveValidator
 	| ArrayValidator<any>
 	| ObjectValidator<any>
-	| SetValidator<any>;
+	| SetValidator<any>
+	| MapValidator<any>;
 
 export const y = {
 	boolean: () => new BooleanValidator(),
@@ -39,7 +42,8 @@ export const y = {
 	object: <T extends ObjectShape>(shape: T) => new ObjectValidator<T>(shape),
 	array: <T extends Validator>(shape: T) => new ArrayValidator<T>(shape),
 	number: () => new NumberValidator(),
-	set: <T extends PrimitiveValidator>(shape: T) => new SetValidator<T>(shape)
+	set: <T extends PrimitiveValidator>(shape: T) => new SetValidator<T>(shape),
+	map: <T extends Validator>(shape: T) => new MapValidator<T>(shape)
 };
 
 // I need to add these properties as optional because of typescript.
@@ -55,11 +59,17 @@ type InferYTypeFromShape<Shape extends Validator | ObjectShape> = Shape extends 
 			? YMap<any>
 			: Shape extends SetValidator<any>
 				? YArray<any>
-				: YText;
+				: Shape extends MapValidator<any>
+					? YMap<any>
+					: YText;
 
-type Getters<T extends 'object' | 'array', Shape extends Validator | ObjectShape> = {
+type Getters<T extends 'object' | 'array' | 'map', Shape extends Validator | ObjectShape> = {
 	getState?: () => State;
-	getYTypes?: () => T extends 'array' ? AbstractType<any>[] : InferYTypeFromShape<Shape>;
+	getYTypes?: () => T extends 'array'
+		? AbstractType<any>[]
+		: T extends 'map'
+			? Record<string, InferYTypeFromShape<Shape>>
+			: InferYTypeFromShape<Shape>;
 	getYType?: () => T extends 'array' ? YArray<any> : YMap<any>;
 };
 
@@ -71,7 +81,7 @@ type NORO<N extends boolean, O extends boolean, T> = N extends true
 		? T | undefined
 		: T;
 
-type InferSchemaType<T> =
+export type InferSchemaType<T> =
 	T extends ObjectValidator<infer Shape, infer O, infer N>
 		? NORO<N, O, SchemaOutput<Shape>>
 		: T extends BaseValidator<infer S, infer O, infer N>
@@ -80,7 +90,9 @@ type InferSchemaType<T> =
 				? InferSchemaType<Shape>[] & Getters<'array', Shape>
 				: T extends SetValidator<infer Shape, infer O, infer N>
 					? NORO<N, O, Set<InferSchemaType<Shape>>> & Getters<'array', Shape>
-					: never;
+					: T extends MapValidator<infer Shape, infer O, infer N>
+						? NORO<N, O, Map<string, InferSchemaType<Shape>>> & Getters<'map', Shape>
+						: never;
 
 export type SchemaOutput<T extends ObjectShape> = Simplify<{
 	[K in keyof T]: InferSchemaType<T[K]>;

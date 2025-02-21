@@ -3,16 +3,6 @@ import { isMissingOptionnal } from '../utils.js';
 import { createSyncroState } from './syncroState.svelte.js';
 import { logError } from '../utils.js';
 import { NULL_OBJECT } from '../constants.js';
-const createYTypesObjectProxy = (yType) => {
-    return new Proxy({}, {
-        get: (target, key) => {
-            if (typeof key === 'string' && yType.has(key)) {
-                return yType.get(key);
-            }
-            return undefined;
-        }
-    });
-};
 export class SyncedObject {
     state;
     validator;
@@ -36,8 +26,8 @@ export class SyncedObject {
             logError('Can not delete non optional property', p);
             return true;
         }
-        this.yType.delete(p);
         syncroState.destroy();
+        this.yType.delete(p);
         delete this.syncroStates[p];
         return true;
     };
@@ -68,9 +58,7 @@ export class SyncedObject {
                 }
                 const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
                 remainingStates.forEach((key) => {
-                    this.syncroStates[key].destroy();
-                    delete this.syncroStates[key];
-                    this.yType.delete(key);
+                    this.deleteProperty({}, key);
                 });
                 Object.entries(value).forEach(([key, value]) => {
                     if (key in shape) {
@@ -175,6 +163,10 @@ export class SyncedObject {
     }
     observe = (e, _transaction) => {
         if (_transaction.origin !== this.state.transactionKey) {
+            if (this.yType.has(NULL_OBJECT)) {
+                this.isNull = true;
+                return;
+            }
             e.changes?.keys.forEach(({ action }, key) => {
                 const syncedType = this.syncroStates[key];
                 if (action === 'delete' && syncedType) {
@@ -192,10 +184,6 @@ export class SyncedObject {
                     Object.assign(this.syncroStates, { [key]: syncroState });
                 }
             });
-            if (this.yType.has(NULL_OBJECT)) {
-                this.isNull = true;
-                return;
-            }
         }
     };
     toJSON = () => {

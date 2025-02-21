@@ -1,28 +1,21 @@
 import * as Y from 'yjs';
 import type { ObjectValidator } from '../schemas/object.js';
 import type { Validator } from '../schemas/schema.js';
-import { isMissingOptionnal } from '../utils.js';
+import {
+	getStringifiedValueFromType,
+	getTypeFromYType,
+	getTypeOfValue,
+	isMissingOptionnal,
+	type Type
+} from '../utils.js';
 import { type State, type SyncroStates, createSyncroState } from './syncroState.svelte.js';
 import type { SyncedContainer } from './common.js';
 import { logError } from '../utils.js';
 import { NULL_OBJECT } from '$lib/constants.js';
 
-const createYTypesObjectProxy = (yType: Y.Map<any>) => {
-	return new Proxy(
-		{},
-		{
-			get: (target, key) => {
-				if (typeof key === 'string' && yType.has(key)) {
-					return yType.get(key);
-				}
-				return undefined;
-			}
-		}
-	);
-};
 export class SyncedObject {
 	state: State;
-	validator: ObjectValidator<any>;
+	validator?: ObjectValidator<any>;
 	yType: Y.Map<any>;
 	syncroStates = $state<Record<string, SyncroStates>>({});
 	baseImplementation = {};
@@ -30,6 +23,13 @@ export class SyncedObject {
 	parent: SyncedContainer;
 	key: string | number;
 	isNull: boolean = $state(false);
+
+	private keyInShape = (key: string) => {
+		if (!this.validator) {
+			return true;
+		}
+		return key in this.validator.$schema.shape;
+	};
 
 	deleteProperty = (target: any, p: any) => {
 		if (typeof p !== 'string') {
@@ -40,15 +40,27 @@ export class SyncedObject {
 		if (!syncroState) {
 			logError('Property does not exist', p);
 			return true;
-		} else if (!syncroState.validator.$schema.optional) {
+		} else if (syncroState.validator && !syncroState.validator.$schema.optional) {
 			logError('Can not delete non optional property', p);
 			return true;
 		}
-		this.yType.delete(p);
 		syncroState.destroy();
+		this.yType.delete(p);
 		delete this.syncroStates[p];
 		return true;
 	};
+
+	setChildType(key: string, type: Type, forceNewType: boolean) {
+		console.log(1, { forceNewType });
+		this.syncroStates[key] = createSyncroState({
+			key,
+			forceNewType,
+			type,
+			parent: this,
+			state: this.state
+		});
+		// this.yType.delete(key);
+	}
 
 	setNull() {
 		this.isNull = true;
@@ -56,14 +68,14 @@ export class SyncedObject {
 	}
 
 	set value(input: any) {
-		const { isValid, value } = this.validator.parse(input);
+		const { isValid, value } = this.validator
+			? this.validator.parse(input)
+			: { isValid: true, value: input };
 
 		if (!isValid) {
 			logError('Invalid value', { value });
 			return;
 		}
-
-		const shape = this.validator.$schema.shape;
 
 		this.state.transaction(() => {
 			if (!value) {
@@ -79,19 +91,18 @@ export class SyncedObject {
 				}
 				const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
 				remainingStates.forEach((key) => {
-					this.syncroStates[key].destroy();
-					delete this.syncroStates[key];
-					this.yType.delete(key);
+					this.deleteProperty({}, key);
 				});
 				Object.entries(value).forEach(([key, value]) => {
-					if (key in shape) {
+					if (this.keyInShape(key)) {
 						const syncroState = this.syncroStates[key];
 						if (syncroState) {
 							syncroState.value = value;
 						} else {
 							this.syncroStates[key] = createSyncroState({
 								key,
-								validator: shape[key],
+								validator: this.validator ? this.validator.$schema.shape[key] : undefined,
+								type: this.validator ? undefined : getTypeOfValue(value),
 								parent: this,
 								state: this.state,
 								value
@@ -121,7 +132,7 @@ export class SyncedObject {
 	}: {
 		state: State;
 		observe?: boolean;
-		validator: ObjectValidator<any>;
+		validator?: ObjectValidator<any>;
 		yType: Y.Map<any>;
 		baseImplementation?: any;
 		value?: any;
@@ -134,8 +145,6 @@ export class SyncedObject {
 		this.validator = validator;
 		this.yType = yType;
 		this.baseImplementation = baseImplementation;
-
-		const shape = this.validator.$schema.shape;
 
 		this.proxy = new Proxy(
 			{},
@@ -164,9 +173,11 @@ export class SyncedObject {
 					return syncroState.value;
 				},
 				set: (target: any, key: any, value: any) => {
-					if (!(key in this.validator.$schema.shape)) {
+					// only set if the key has a validator and is in the shape
+					if (this.validator && !(key in this.validator.$schema.shape)) {
 						return false;
 					}
+
 					if (value === undefined) {
 						return this.deleteProperty(target, key);
 					}
@@ -176,7 +187,8 @@ export class SyncedObject {
 						this.state.transaction(() => {
 							this.syncroStates[key] = createSyncroState({
 								key,
-								validator: shape[key],
+								validator: this.validator?.$schema.shape?.[key],
+								type: this.validator ? undefined : getTypeOfValue(value),
 								parent: this,
 								state: this.state,
 								value
@@ -216,8 +228,13 @@ export class SyncedObject {
 			this.sync(value);
 		}
 	}
+
 	observe = (e: Y.YMapEvent<any>, _transaction: Y.Transaction) => {
 		if (_transaction.origin !== this.state.transactionKey) {
+			if (this.yType.has(NULL_OBJECT)) {
+				this.isNull = true;
+				return;
+			}
 			e.changes?.keys.forEach(({ action }, key) => {
 				const syncedType = this.syncroStates[key];
 				if (action === 'delete' && syncedType) {
@@ -228,7 +245,10 @@ export class SyncedObject {
 					// If a new key is added to the object and is valid, integrate it
 					const syncroState = createSyncroState({
 						key,
-						validator: this.validator.$schema.shape[key] as Validator,
+						validator: this.validator
+							? (this.validator.$schema.shape[key] as Validator)
+							: undefined,
+						type: this.validator ? undefined : getTypeFromYType(e.target.get(key)),
 						state: this.state,
 						parent: this
 					});
@@ -236,21 +256,27 @@ export class SyncedObject {
 					Object.assign(this.syncroStates, { [key]: syncroState });
 				}
 			});
-			if (this.yType.has(NULL_OBJECT)) {
-				this.isNull = true;
-				return;
-			}
 		}
 	};
 
 	toJSON = () => {
-		return Object.entries(this.validator.$schema.shape).reduce((acc, [key, validator]) => {
-			const value = this.syncroStates[key]?.value;
-			if (value !== undefined) {
-				Object.assign(acc, { [key]: value });
-			}
-			return acc;
-		}, {});
+		if (this.validator) {
+			return Object.entries(this.validator.$schema.shape).reduce((acc, [key, validator]) => {
+				const value = this.syncroStates[key]?.value;
+				if (value !== undefined) {
+					Object.assign(acc, { [key]: value });
+				}
+				return acc;
+			}, {});
+		} else {
+			return Object.entries(this.syncroStates).reduce((acc, [key, syncroState]) => {
+				const value = syncroState.value;
+				if (value !== undefined) {
+					Object.assign(acc, { [key]: value });
+				}
+				return acc;
+			}, {});
+		}
 	};
 
 	sync = (value?: any) => {
@@ -260,28 +286,54 @@ export class SyncedObject {
 				this.isNull = true;
 				return;
 			}
-			const hasDefaultValue = this.validator.$schema.default;
-			if (!hasDefaultValue) {
-				if (this.validator.$schema.nullable && !value) {
-					this.setNull();
-					return;
-				}
-			}
-			(Object.entries(this.validator.$schema.shape) as [string, Validator][]).forEach(
-				([key, validator]) => {
-					if (isMissingOptionnal({ validator, parent: this.yType, key })) {
+
+			if (this.validator) {
+				const hasDefaultValue = this.validator.$schema.default;
+				if (!hasDefaultValue) {
+					if (this.validator.$schema.nullable && !value) {
+						this.setNull();
 						return;
 					}
-
-					this.syncroStates[key] = createSyncroState({
-						key,
-						validator: validator,
-						parent: this,
-						value: value?.[key] || this.validator.$schema.default?.[key],
-						state: this.state
+				}
+				(Object.entries(this.validator.$schema.shape) as [string, Validator][]).forEach(
+					([key, validator]) => {
+						if (isMissingOptionnal({ validator, parent: this.yType, key })) {
+							return;
+						}
+						this.syncroStates[key] = createSyncroState({
+							key,
+							validator: validator,
+							parent: this,
+							value: value?.[key] || this.validator!.$schema.default?.[key],
+							state: this.state
+						});
+					}
+				);
+			} else {
+				if (!this.state.initialized) {
+					// Handle the case where the object is schemaless and we want to apply default value
+					Object.entries(value).forEach(([key, value]) => {
+						console.log({ value, key });
+						this.syncroStates[key] = createSyncroState({
+							key,
+							parent: this,
+							state: this.state,
+							value,
+							type: getTypeOfValue(value)
+						});
+					});
+				} else {
+					this.yType.forEach((yType, key) => {
+						this.syncroStates[key] = createSyncroState({
+							key,
+							parent: this,
+							value: value?.[key] || this.validator!.$schema.default?.[key],
+							state: this.state,
+							type: getTypeFromYType(yType)
+						});
 					});
 				}
-			);
+			}
 		});
 	};
 

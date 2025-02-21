@@ -26,7 +26,7 @@ export declare class SyncedArray<T extends any = any> {
     });
     toJSON: () => any[];
     sync: (value?: any[]) => void;
-    observe: () => (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;
+    observe: (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => void;
     methods: {
         slice: (start?: number | undefined, end?: number | undefined) => any[];
         toReversed: () => any[];
