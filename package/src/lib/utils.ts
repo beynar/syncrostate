@@ -7,18 +7,6 @@ import type { SyncedArray } from './proxys/array.svelte.js';
 import { SyncedSet } from './proxys/set.svelte.js';
 import { createSyncroState } from './proxys/syncroState.svelte.js';
 
-export type Type =
-	| 'string'
-	| 'number'
-	| 'boolean'
-	| 'object'
-	| 'array'
-	| 'date'
-	| 'set'
-	| 'map'
-	// enum is here just for typescript purpose. They do not exist in schemasless land
-	| 'enum';
-
 export const isMissingOptionnal = ({
 	parent,
 	key,
@@ -34,7 +22,7 @@ export const isMissingOptionnal = ({
 	return isMissingOptionnal && !hasDefault;
 };
 
-export const getInitialStringifiedValueFromValidator = (value: any, validator: Validator) => {
+export const getInitialStringifiedValue = (value: any, validator: Validator) => {
 	if (
 		validator.$schema.kind === 'array' ||
 		validator.$schema.kind === 'object' ||
@@ -58,109 +46,35 @@ export const getInitialStringifiedValueFromValidator = (value: any, validator: V
 		return stringifiedDefaultValue;
 	}
 };
-export const getStringifiedValueFromType = (value: any, type?: Type) => {
-	if (type === 'array' || type === 'object' || type === 'map' || type === 'set' || !type) {
-		return undefined;
-	}
-
-	if (value === null) {
-		return NULL;
-	}
-	switch (type) {
-		case 'string':
-			return String(value);
-		case 'number':
-			return String(value);
-		case 'boolean':
-			return String(value);
-		case 'date': {
-			const date = value instanceof Date ? value : new Date(value);
-			return date.toISOString();
-		}
-	}
-};
-
-export const getTypeOfValue = (value: any): Type => {
-	if (typeof value === 'string') {
-		return 'string';
-	} else if (typeof value === 'number') {
-		return 'number';
-	} else if (typeof value === 'boolean') {
-		return 'boolean';
-	} else if (typeof value === 'object') {
-		if (value instanceof Date) {
-			return 'date';
-		} else if (value instanceof Array) {
-			return 'array';
-		} else if (value instanceof Map) {
-			return 'map';
-		} else if (value instanceof Set) {
-			return 'set';
-		} else if (Object.keys(value).length > 0) {
-			return 'object';
-		}
-	}
-	throw new Error('Unknown type');
-};
-
-export const getTypeFromYType = (yType: Y.AbstractType<any>): Type => {
-	if (yType instanceof Y.Text) {
-		return yType.getAttribute('type') || 'string';
-	} else if (yType instanceof Y.Array) {
-		return 'array';
-	} else if (yType instanceof Y.Map) {
-		return 'map';
-	}
-
-	throw new Error('Unknown type');
-};
 
 export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>({
 	parent,
 	key,
 	validator,
 	forceNewType,
-	value,
-	type
+	value
 }: {
 	parent: Y.Map<any> | Y.Array<any>;
 	key: string | number;
 	value?: string;
 	forceNewType?: boolean;
-	validator?: Validator;
-	type?: Type;
+	validator: Validator;
 }): T => {
 	const isArray = parent instanceof Y.Array;
-
-	const instance = getInstance(validator?.$schema.kind || type!) as new () =>
-		| Y.Array<any>
-		| Y.Map<any>
-		| Y.Text;
+	const instance = getInstance(validator) as new () => Y.Array<any> | Y.Map<any> | Y.Text;
 	const isText = instance === Y.Text;
+	const stringifiedValue = getInitialStringifiedValue(value, validator);
+	const type = isText ? new Y.Text(stringifiedValue) : new instance();
 	const typeInParent = (isArray ? parent.get(Number(key)) : parent.get(String(key))) as T;
 
-	const stringifiedValue = validator
-		? getInitialStringifiedValueFromValidator(value || typeInParent.toJSON(), validator)
-		: getStringifiedValueFromType(value || typeInParent.toJSON(), type);
-
-	// console.log(3, { value, type, typeInParent: typeInParent });
-	// In case the state is schemaless
-	// store type in yText in order to be know how to parse it later
 	const setAndReturnType = () => {
-		const yType = isText ? new Y.Text(stringifiedValue) : new instance();
-		console.log({ stringifiedValue });
-		if (type && yType instanceof Y.Text) {
-			yType._pending?.push(() => {
-				yType.setAttribute('type', type);
-			});
-		}
 		if (isArray) {
-			parent.insert(Number(key), [yType]);
+			parent.insert(Number(key), [type]);
 		} else {
 			parent.delete(String(key));
-			parent.set(String(key), yType);
+			parent.set(String(key), type);
 		}
-		return yType as T;
+		return type as T;
 	};
 
 	if (!typeInParent || typeInParent._item?.deleted || forceNewType) {
@@ -174,8 +88,8 @@ export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>(
 	}
 };
 
-export const getInstance = (type: Type): (new () => Y.AbstractType<any>) | null => {
-	switch (type) {
+export const getInstance = (validator: Validator): (new () => Y.AbstractType<any>) | null => {
+	switch (validator.$schema.kind) {
 		case 'map':
 		case 'object':
 			return Y.Map;
