@@ -4,9 +4,10 @@
 	import hljs from 'highlight.js';
 	import 'highlight.js/styles/github-dark.css';
 	import javascript from 'highlight.js/lib/languages/json';
-	import { LiveblocksYjsProvider } from '@liveblocks/yjs';
 	import { createClient } from '@liveblocks/client';
 	import { onMount } from 'svelte';
+	import { Inspect } from 'svelte-inspect-value';
+
 	hljs.registerLanguage('javascript', javascript);
 
 	const highlight = (node: HTMLElement, json: string) => {
@@ -25,13 +26,18 @@
 			room.disconnect();
 		};
 	});
+
 	const document = syncroState({
 		// sync: async ({ doc, synced }) => {
 		// 	const yProvider = new LiveblocksYjsProvider(room, doc);
 		// 	yProvider.on('synced', () => {
-		// 		synced();
+		// 		synced(yProvider);
 		// 	});
 		// },
+		presence: {
+			name: 'John',
+			id: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+		},
 		schema: {
 			name: y.string().default('Bob').optional(),
 			firstName: y.string().default('Smith'),
@@ -57,6 +63,8 @@
 				.optional()
 		}
 	});
+
+	const docState = document.getState!();
 
 	let friends = $state(['John']);
 
@@ -138,7 +146,6 @@
 	}
 
 	const logNestedState = () => {
-		const t = document.getYTypes!().age;
 		console.log({
 			family: {
 				state: document.family.getState?.(),
@@ -151,6 +158,12 @@
 				yTypes: document.getYTypes?.()
 			}
 		});
+	};
+	const setPresence = () => {
+		docState.presence.me = {
+			id: '123',
+			name: docState.presence.me?.name === 'John' ? 'Alice' : 'John'
+		};
 	};
 
 	const json = $derived(JSON.stringify(document, null, 2));
@@ -192,16 +205,19 @@
 				<h3 class="text-lg font-bold">Utils</h3>
 				<div class="grid grid-cols-2 gap-2">
 					<button class="btn btn-warning" onclick={logNestedState}>Log nested $state</button>
+					<button class="btn btn-warning" onclick={setPresence}>Set Presence</button>
 				</div>
 			</div>
 		</div>
 		<div class="">
-			<div class="mockup-code p-2">
-				<code>
-					{#key json}
-						<pre use:highlight={json}>es</pre>
-					{/key}
-				</code>
+			<div class=" p-2">
+				<Inspect noanimate name="Me" value={document.getState?.().presence.me} />
+			</div>
+			<div class=" p-2">
+				<Inspect noanimate name="Others" value={document.getState?.().presence.others} />
+			</div>
+			<div class=" p-2">
+				<Inspect expandLevel={1} noanimate name="Document" value={document} />
 			</div>
 		</div>
 	</div>

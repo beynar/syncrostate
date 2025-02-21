@@ -25,14 +25,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>150/150</span>
+                <span class='fraction'>151/151</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80% </span>
+                <span class="strong">75% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>4/5</span>
+                <span class='fraction'>6/8</span>
             </div>
         
             
@@ -46,7 +46,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">100% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>150/150</span>
+                <span class='fraction'>151/151</span>
             </div>
         
             
@@ -308,14 +308,16 @@
 <a name='L243'></a><a href='#L243'>243</a>
 <a name='L244'></a><a href='#L244'>244</a>
 <a name='L245'></a><a href='#L245'>245</a>
-<a name='L246'></a><a href='#L246'>246</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<a name='L246'></a><a href='#L246'>246</a>
+<a name='L247'></a><a href='#L247'>247</a>
+<a name='L248'></a><a href='#L248'>248</a>
+<a name='L249'></a><a href='#L249'>249</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -367,16 +369,16 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-yes">5x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -501,6 +503,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -520,6 +523,7 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -536,6 +540,7 @@
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
@@ -547,6 +552,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-yes">1x</span>
 <span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -555,11 +561,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import * as Y from 'yjs';
 import { SvelteSet } from 'svelte/reactivity';
-&nbsp;
 import { isArrayNull, logError, observeArray, propertyToNumber, setArrayToNull } from '../utils.js';
 import { createSyncroState, type State, type SyncroStates } from './syncroState.svelte.js';
 import type { SyncedContainer } from './common.js';
-import type { SetValidator } from '$lib/schemas/set.js';
+import type { SetValidator } from '../schemas/set.js';
 &nbsp;
 export class SyncedSet {
 	state: State;
@@ -605,7 +610,7 @@ export class SyncedSet {
 							key: i,
 							validator: this.validator.$schema.shape,
 							parent: this,
-							value: value?.[i],
+							value: <span class="branch-0 cbranch-no" title="branch not covered" >value?.[i],</span>
 							state: this.state
 						})
 					);
@@ -746,56 +751,60 @@ export class SyncedSet {
 &nbsp;
 	set value(input: Set&lt;any&gt; | null) {
 		const { isValid, value } = this.validator.parse(input);
-		console.log({ value, isValid });
-		if (!isValid) {
-			logError('Invalid value', { value });
-			return;
-		} else {
-			if (!value) {
-				if (value === <span class="branch-0 cbranch-no" title="branch not covered" >undefined) {</span>
-					// this.parent.deleteProperty({}, this.key);
-				} else {
-					this.setNull();
-				}
+&nbsp;
+		this.state.transaction(() =&gt; {
+			if (!isValid) {
+				logError('Invalid value', { value });
+				return;
 			} else {
-				this.syncroStatesValues.clear();
-				const valueArray = Array.from(value);
-&nbsp;
-				if (this.isNull) {
-					this.isNull = false;
-					this.yType.delete(0, this.yType.length);
-				}
-				if (!this.isNull) {
-					const remainingStates = Array.from(this.syncroStates).slice(valueArray.length);
-					remainingStates.forEach((state) =&gt; {
-						state.destroy();
-					});
-					if (remainingStates.length) {
-						this.yType.delete(valueArray.length, remainingStates.length);
-					}
-				}
-&nbsp;
-				this.syncroStates = valueArray.map((item, index) =&gt; {
-					const previsousState = this.syncroStates[index];
-					if (previsousState) {
-						previsousState.value = item;
-						this.syncroStatesValues.add(previsousState.value);
-						return previsousState;
+				if (!value) {
+					if (value === <span class="branch-0 cbranch-no" title="branch not covered" >undefined) {</span>
+						// this.parent.deleteProperty({}, this.key);
 					} else {
-						const state = createSyncroState({
-							forceNewType: true,
-							key: index,
-							validator: this.validator.$schema.shape,
-							parent: this,
-							value: item,
-							state: this.state
-						});
-						this.syncroStatesValues.add(state.value);
-						return state;
+						this.setNull();
 					}
-				});
+				} else {
+					this.syncroStatesValues.clear();
+					const valueArray = Array.from(value);
+&nbsp;
+					if (this.isNull) {
+						this.isNull = false;
+						this.yType.delete(0, this.yType.length);
+					}
+&nbsp;
+					if (!this.isNull) {
+						const remainingStates = Array.from(this.syncroStates).slice(valueArray.length);
+						remainingStates.forEach((state) =&gt; {
+							state.destroy();
+						});
+						if (remainingStates.length) {
+							this.yType.delete(valueArray.length, remainingStates.length);
+						}
+					}
+&nbsp;
+					this.syncroStates = valueArray.map((item, index) =&gt; {
+						const previsousState = this.syncroStates[index];
+						if (previsousState) {
+							previsousState.value = item;
+							console.log('state', previsousState.value);
+							this.syncroStatesValues.add(previsousState.value);
+							return previsousState;
+						} else {
+							const state = createSyncroState({
+								forceNewType: true,
+								key: index,
+								validator: this.validator.$schema.shape,
+								parent: this,
+								value: item,
+								state: this.state
+							});
+							this.syncroStatesValues.add(state.value);
+							return state;
+						}
+					});
+				}
 			}
-		}
+		});
 	}
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -805,7 +814,7 @@ export class SyncedSet {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2025-01-10T22:56:56.714Z
+                at 2025-02-21T10:15:06.213Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

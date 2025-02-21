@@ -1,6 +1,6 @@
 import * as Y from 'yjs';
 import type { Validator } from './schemas/schema.js';
-import { INITIALIZED, NULL, NULL_ARRAY } from './constants.js';
+import { NULL, NULL_ARRAY } from './constants.js';
 import type { BaseValidator } from './schemas/base.js';
 import { DEV } from 'esm-env';
 import type { SyncedArray } from './proxys/array.svelte.js';
@@ -26,6 +26,7 @@ export const getInitialStringifiedValue = (value: any, validator: Validator) => 
 	if (
 		validator.$schema.kind === 'array' ||
 		validator.$schema.kind === 'object' ||
+		validator.$schema.kind === 'map' ||
 		validator.$schema.kind === 'set'
 	) {
 		return undefined;
@@ -89,6 +90,7 @@ export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>(
 
 export const getInstance = (validator: Validator): (new () => Y.AbstractType<any>) | null => {
 	switch (validator.$schema.kind) {
+		case 'map':
 		case 'object':
 			return Y.Map;
 		case 'set':
@@ -122,9 +124,16 @@ export const propertyToNumber = (p: string | number | symbol) => {
 };
 
 export function setArrayToNull(this: SyncedArray | SyncedSet) {
-	this.isNull = true;
-	this.yType.delete(0, this.yType.length);
-	this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+	this.state.transaction(() => {
+		this.syncroStates.forEach((state) => state.destroy());
+		if (this instanceof SyncedSet) {
+			this.syncroStatesValues.clear();
+		}
+		this.syncroStates = [];
+		this.isNull = true;
+		this.yType.delete(0, this.yType.length);
+		this.yType.insert(0, [new Y.Text(NULL_ARRAY)]);
+	});
 }
 
 export const isArrayNull = ({ yType }: { yType: Y.Array<any> }) => {
@@ -133,45 +142,57 @@ export const isArrayNull = ({ yType }: { yType: Y.Array<any> }) => {
 	);
 };
 
-export function observeArray(this: SyncedArray | SyncedSet) {
-	return (e: Y.YArrayEvent<any>, _transaction: Y.Transaction) => {
-		if (_transaction.origin !== this.state.transactionKey) {
-			let start = 0;
-			e.delta.forEach(({ retain, delete: _delete, insert }) => {
-				if (retain) {
-					start += retain;
-				}
-				if (_delete) {
-					const deleted = this.syncroStates.splice(start, _delete);
-					deleted.forEach((state) => {
-						state.destroy();
-					});
-					start -= _delete;
-				}
-				if (Array.isArray(insert)) {
-					for (let i = 0; i < insert.length; i++) {
-						if (insert[i] instanceof Y.Text && insert[i].toString() === NULL_ARRAY) {
-							this.isNull = true;
-							return;
-						}
-						this.syncroStates.splice(
-							start,
-							0,
-							createSyncroState({
-								key: start,
-								validator: this.validator.$schema.shape,
-								parent: this,
-								state: this.state
-							})
-						);
-						start += 1;
-					}
-				}
-			});
-			if (this instanceof SyncedSet) {
-				this.syncroStatesValues.clear();
-				this.syncroStatesValues.add(this.syncroStates.map((state) => state.value));
-			}
+export function observeArray(
+	this: SyncedArray | SyncedSet,
+	e: Y.YArrayEvent<any>,
+	_transaction: Y.Transaction
+) {
+	if (_transaction.origin !== this.state.transactionKey) {
+		if (isArrayNull(this)) {
+			this.isNull = true;
+			return;
 		}
-	};
+
+		let start = 0;
+		e.delta.forEach(({ retain, delete: _delete, insert }) => {
+			if (retain) {
+				start += retain;
+			}
+			if (_delete) {
+				const deleted = this.syncroStates.splice(start, _delete);
+				deleted.forEach((state) => {
+					state.destroy();
+				});
+				start -= _delete;
+			}
+			if (Array.isArray(insert)) {
+				for (let i = 0; i < insert.length; i++) {
+					if (insert[i] instanceof Y.Text && insert[i].toString() === NULL_ARRAY) {
+						this.isNull = true;
+						return;
+					}
+					this.syncroStates.splice(
+						start,
+						0,
+						createSyncroState({
+							key: start,
+							validator: this.validator.$schema.shape,
+							parent: this,
+							state: this.state
+						})
+					);
+					start += 1;
+				}
+			}
+		});
+
+		if (this instanceof SyncedSet) {
+			this.syncroStatesValues.clear();
+			this.syncroStates
+				.map((state) => state.value)
+				.forEach((value) => {
+					this.syncroStatesValues.add(value);
+				});
+		}
+	}
 }

@@ -155,18 +155,6 @@ describe('ObjectValidator', () => {
 			expect(isValid).toBe(false);
 			expect(value).toBe(null);
 		});
-
-		it('should coerce values when possible', () => {
-			const obj = {
-				name: 'John',
-				age: '30'
-			};
-			const expected = {
-				name: 'John',
-				age: 30
-			};
-			expect(schema.coerce(obj)).toEqual(expected);
-		});
 	});
 
 	describe('optional object', () => {

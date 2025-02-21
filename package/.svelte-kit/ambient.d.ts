@@ -38,7 +38,6 @@ declare module '$env/static/private' {
 	export const NVM_CD_FLAGS: string;
 	export const GEM_HOME: string;
 	export const rvm_gemstone_url: string;
-	export const WARP_HONOR_PS1: string;
 	export const TERM: string;
 	export const SHELL: string;
 	export const FNM_NODE_DIST_MIRROR: string;
@@ -53,6 +52,7 @@ declare module '$env/static/private' {
 	export const ORIGINAL_XDG_CURRENT_DESKTOP: string;
 	export const MallocNanoZone: string;
 	export const FIG_NEW_SESSION: string;
+	export const CURSOR_TRACE_ID: string;
 	export const COLOR: string;
 	export const rvm_hook: string;
 	export const MY_RUBY_HOME: string;
@@ -70,11 +70,9 @@ declare module '$env/static/private' {
 	export const SSH_AUTH_SOCK: string;
 	export const Q_SET_PARENT_CHECK: string;
 	export const __CF_USER_TEXT_ENCODING: string;
-	export const WARP_IS_LOCAL_SHELL_SESSION: string;
 	export const npm_execpath: string;
 	export const rvm_proxy: string;
 	export const rvm_ruby_file: string;
-	export const WARP_USE_SSH_WRAPPER: string;
 	export const PAGER: string;
 	export const LSCOLORS: string;
 	export const FNM_VERSION_FILE_STRATEGY: string;
@@ -85,7 +83,6 @@ declare module '$env/static/private' {
 	export const PATH: string;
 	export const npm_package_json: string;
 	export const npm_config_engine_strict: string;
-	export const LaunchInstanceID: string;
 	export const npm_config_userconfig: string;
 	export const npm_config_init_module: string;
 	export const __CFBundleIdentifier: string;
@@ -127,7 +124,6 @@ declare module '$env/static/private' {
 	export const VSCODE_GIT_IPC_HANDLE: string;
 	export const LC_CTYPE: string;
 	export const GEM_PATH: string;
-	export const SSH_SOCKET_DIR: string;
 	export const NVM_BIN: string;
 	export const BUN_INSTALL: string;
 	export const npm_config_user_agent: string;
@@ -142,10 +138,8 @@ declare module '$env/static/private' {
 	export const QTERM_SESSION_ID: string;
 	export const rvm_ruby_bits: string;
 	export const rvm_bin_flag: string;
-	export const CONDA_CHANGEPS1: string;
 	export const npm_config_init_author_name: string;
 	export const rvm_only_path_flag: string;
-	export const SECURITYSESSIONID: string;
 	export const RUBY_VERSION: string;
 	export const npm_node_execpath: string;
 	export const npm_config_prefix: string;
@@ -193,7 +187,6 @@ declare module '$env/dynamic/private' {
 		NVM_CD_FLAGS: string;
 		GEM_HOME: string;
 		rvm_gemstone_url: string;
-		WARP_HONOR_PS1: string;
 		TERM: string;
 		SHELL: string;
 		FNM_NODE_DIST_MIRROR: string;
@@ -208,6 +201,7 @@ declare module '$env/dynamic/private' {
 		ORIGINAL_XDG_CURRENT_DESKTOP: string;
 		MallocNanoZone: string;
 		FIG_NEW_SESSION: string;
+		CURSOR_TRACE_ID: string;
 		COLOR: string;
 		rvm_hook: string;
 		MY_RUBY_HOME: string;
@@ -225,11 +219,9 @@ declare module '$env/dynamic/private' {
 		SSH_AUTH_SOCK: string;
 		Q_SET_PARENT_CHECK: string;
 		__CF_USER_TEXT_ENCODING: string;
-		WARP_IS_LOCAL_SHELL_SESSION: string;
 		npm_execpath: string;
 		rvm_proxy: string;
 		rvm_ruby_file: string;
-		WARP_USE_SSH_WRAPPER: string;
 		PAGER: string;
 		LSCOLORS: string;
 		FNM_VERSION_FILE_STRATEGY: string;
@@ -240,7 +232,6 @@ declare module '$env/dynamic/private' {
 		PATH: string;
 		npm_package_json: string;
 		npm_config_engine_strict: string;
-		LaunchInstanceID: string;
 		npm_config_userconfig: string;
 		npm_config_init_module: string;
 		__CFBundleIdentifier: string;
@@ -282,7 +273,6 @@ declare module '$env/dynamic/private' {
 		VSCODE_GIT_IPC_HANDLE: string;
 		LC_CTYPE: string;
 		GEM_PATH: string;
-		SSH_SOCKET_DIR: string;
 		NVM_BIN: string;
 		BUN_INSTALL: string;
 		npm_config_user_agent: string;
@@ -297,10 +287,8 @@ declare module '$env/dynamic/private' {
 		QTERM_SESSION_ID: string;
 		rvm_ruby_bits: string;
 		rvm_bin_flag: string;
-		CONDA_CHANGEPS1: string;
 		npm_config_init_author_name: string;
 		rvm_only_path_flag: string;
-		SECURITYSESSIONID: string;
 		RUBY_VERSION: string;
 		npm_node_execpath: string;
 		npm_config_prefix: string;
