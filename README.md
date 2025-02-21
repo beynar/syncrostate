@@ -15,12 +15,6 @@ SyncroState brings Svelte 5 reactivity to the multiplayer level. Built on top of
 
 Inspired by [Syncedstore](https://github.com/yousefed/SyncedStore), SyncroState modernizes collaborative state management by leveraging new Svelte 5's reactivity system. It provides a natural way to work with synchronized state that feels just like a regular Svelte $state.
 
-> **Note to Svelte Hackathon Organizers**
->
-> This project is my submission for the Svelte Hackathon. Thank you for organizing this amazing event!
->
-> For testing: You can run the test suite in the `/package` folder using the `test:unit` command or run the sveltekit app inside the `/package` folder using the `dev` command or run the demo in the `/demo` folder using the `dev` command.
->
 > ⚠️ The demo uses a public Liveblocks API key which may become rate-limited. I recommend using your own API key for thorough testing.
 
 ## Features
@@ -122,8 +116,8 @@ SyncroState combines the power of Svelte's reactivity system with Yjs's CRDT cap
 ### Local State Management
 
 1. **Proxy-based State Tree**: When you create a state using `syncroState()`, it builds a tree of proxy objects that mirror your schema structure. Each property (primitive or nested) is wrapped in a specialized proxy that leverages Svelte's reactivity through `$state` or specialized proxy like `SvelteDate` or `SvelteSet` and soon `SvelteMap`.
-
 2. **Mutation Trapping**: These proxies intercept all state mutations (assignments, mutative operations, object modifications, reassignments). This allows SyncroState to:
+
    - Validate changes against the schema
    - Update the local Svelte state immediately for responsive UI updates
    - Forward changes to the underlying Yjs document
@@ -144,6 +138,7 @@ SyncroState combines the power of Svelte's reactivity system with Yjs's CRDT cap
    - Yjs handles conflict resolution and ensures eventual consistency
 
 2. **Remote Updates**: When changes come in from other clients:
+
    - Yjs observer callbacks are triggered
    - The proxies update their internal Svelte state
    - Svelte's reactivity system automatically updates any UI components using that state
