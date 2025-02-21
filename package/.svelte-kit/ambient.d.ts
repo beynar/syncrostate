@@ -46,6 +46,7 @@ declare module '$env/static/private' {
 	export const SHELL: string;
 	export const TERM: string;
 	export const rvm_gemstone_url: string;
+	export const npm_package_devDependencies_svelte_inspect_value: string;
 	export const npm_package_devDependencies_vite: string;
 	export const FNM_NODE_DIST_MIRROR: string;
 	export const HOMEBREW_REPOSITORY: string;
@@ -188,7 +189,13 @@ declare module '$env/static/private' {
 	export const npm_package_sideEffects_0: string;
 	export const npm_package_devDependencies__liveblocks_client: string;
 	export const npm_node_execpath: string;
+	export const TEST: string;
+	export const VITEST: string;
 	export const NODE_ENV: string;
+	export const PROD: string;
+	export const DEV: string;
+	export const BASE_URL: string;
+	export const MODE: string;
 }
 
 /**
@@ -240,6 +247,7 @@ declare module '$env/dynamic/private' {
 		SHELL: string;
 		TERM: string;
 		rvm_gemstone_url: string;
+		npm_package_devDependencies_svelte_inspect_value: string;
 		npm_package_devDependencies_vite: string;
 		FNM_NODE_DIST_MIRROR: string;
 		HOMEBREW_REPOSITORY: string;
@@ -382,7 +390,13 @@ declare module '$env/dynamic/private' {
 		npm_package_sideEffects_0: string;
 		npm_package_devDependencies__liveblocks_client: string;
 		npm_node_execpath: string;
+		TEST: string;
+		VITEST: string;
 		NODE_ENV: string;
+		PROD: string;
+		DEV: string;
+		BASE_URL: string;
+		MODE: string;
 		[key: `PUBLIC_${string}`]: undefined;
 		[key: `${string}`]: string | undefined;
 	}
