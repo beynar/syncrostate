@@ -3,10 +3,8 @@ node_modules
 # Output
 .output
 .vercel
-**/.svelte-kit
-/build
-/dist
-
+.netlify
+.wrangler
 
 # OS
 .DS_Store
