@@ -23,7 +23,18 @@ const schema = {
 		.map(y.string())
 		.optional()
 		.nullable()
-		.default(new Map([['key', 'value']]))
+		.default(new Map([['key', 'value']])),
+	arrayOfObjects: y
+		.array(y.object({ text: y.string() }))
+		.optional()
+		.nullable()
+		.default([{ text: 'default' }]),
+	discriminatedUnion: y
+		.discriminatedUnion('type', [
+			{ type: y.literal('a'), value: y.string() } as const,
+			{ type: y.literal('b'), value: y.number() } as const
+		])
+		.default({ type: 'a', value: 'default' })
 };
 
 const doc = new Doc();
@@ -235,6 +246,36 @@ describe('SyncroState', () => {
 			state1.map.clear();
 			expect(state1.map.size).toBe(0);
 			expect(state2.map.size).toBe(0);
+		});
+	});
+
+	describe('discriminatedUnion field', () => {
+		it('should sync regular discriminatedUnion mutation', () => {
+			state1.discriminatedUnion = { type: 'a', value: 'hello' };
+			expect(state1.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+			expect(state2.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+		});
+
+		it('should sync null discriminatedUnion mutation', () => {
+			(state1.discriminatedUnion as any) = null;
+			expect(state1.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+			expect(state2.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+		});
+
+		it('should sync undefined discriminatedUnion mutation', () => {
+			(state1.discriminatedUnion as any) = undefined;
+			expect(state1.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+			expect(state2.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+		});
+
+		it('should sync discriminatedUnion mutation with different type', () => {
+			console.log('here-1', state1.discriminatedUnion.type);
+			state1.discriminatedUnion = { type: 'b', value: 42 };
+			console.log('here-2', state1.discriminatedUnion.type, state1.discriminatedUnion.value);
+			expect(state1.discriminatedUnion).toEqual({ type: 'b', value: 42 });
+			expect(state2.discriminatedUnion).toEqual({ type: 'b', value: 42 });
+
+			console.log('here', state1.discriminatedUnion.type);
 		});
 	});
 });

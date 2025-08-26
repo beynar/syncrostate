@@ -5,14 +5,8 @@ import * as Y from 'yjs';
 describe('DiscriminatedUnion Integration Tests', () => {
 	it('should work with the full syncroState system', () => {
 		const apiResponseSchema = y.discriminatedUnion('status', [
-			y.object({
-				status: y.literal('success'),
-				data: y.string()
-			}),
-			y.object({
-				status: y.literal('error'),
-				message: y.string()
-			})
+			{ status: y.literal('success'), data: y.string() },
+			{ status: y.literal('error'), message: y.string() }
 		]);
 
 		const schema = {
@@ -65,8 +59,8 @@ describe('DiscriminatedUnion Integration Tests', () => {
 		const schema = {
 			result: y
 				.discriminatedUnion('type', [
-					y.object({ type: y.literal('data'), value: y.string() }),
-					y.object({ type: y.literal('error'), code: y.number() })
+					{ type: y.literal('data'), value: y.string() },
+					{ type: y.literal('error'), code: y.number() }
 				])
 				.nullable()
 		};
@@ -86,20 +80,9 @@ describe('DiscriminatedUnion Integration Tests', () => {
 
 	it('should handle complex nested discriminated unions', () => {
 		const userSchema = y.discriminatedUnion('role', [
-			y.object({
-				role: y.literal('admin'),
-				name: y.string(),
-				permissions: y.array(y.string())
-			}),
-			y.object({
-				role: y.literal('user'),
-				name: y.string(),
-				email: y.string()
-			}),
-			y.object({
-				role: y.literal('guest'),
-				sessionId: y.string()
-			})
+			{ role: y.literal('admin'), name: y.string(), permissions: y.array(y.string()) },
+			{ role: y.literal('user'), name: y.string(), email: y.string() },
+			{ role: y.literal('guest'), sessionId: y.string() }
 		]);
 
 		const schema = { user: userSchema };

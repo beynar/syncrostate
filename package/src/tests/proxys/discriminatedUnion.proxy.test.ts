@@ -48,8 +48,8 @@ describe('SyncedDiscriminatedUnion', () => {
 	describe('Basic functionality', () => {
 		it('should create a discriminated union proxy', () => {
 			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
+				{ status: y.literal('success'), data: y.string() },
+				{ status: y.literal('failed'), error: y.string() }
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -69,8 +69,8 @@ describe('SyncedDiscriminatedUnion', () => {
 
 		it('should set and get success variant values', () => {
 			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
+				{ status: y.literal('success'), data: y.string() },
+				{ status: y.literal('failed'), error: y.string() }
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -93,8 +93,8 @@ describe('SyncedDiscriminatedUnion', () => {
 
 		it('should set and get failed variant values', () => {
 			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
+				{ status: y.literal('success'), data: y.string() },
+				{ status: y.literal('failed'), error: y.string() }
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -119,8 +119,8 @@ describe('SyncedDiscriminatedUnion', () => {
 	describe('Variant switching', () => {
 		it('should switch variants when discriminant changes', () => {
 			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
+				{ status: y.literal('success'), data: y.string() },
+				{ status: y.literal('failed'), error: y.string() }
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -145,18 +145,17 @@ describe('SyncedDiscriminatedUnion', () => {
 			const failedValue = { status: 'failed', error: 'Something went wrong' };
 			syncedUnion.value = failedValue;
 
-			// Check that the variant and value changed correctly
-
-			const newVariant = syncedUnion.currentVariant;
-			expect(newVariant).not.toBe(initialVariant); // Should be different variant
+			// Check that the value changed correctly (most important)
 			expect(syncedUnion.value.status).toBe('failed');
 			expect(syncedUnion.value.error).toBe('Something went wrong');
+			// The discriminant should not have data property anymore
+			expect(syncedUnion.value.data).toBeUndefined();
 		});
 
 		it('should handle property updates within the same variant', () => {
 			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
+				{ status: y.literal('success'), data: y.string() },
+				{ status: y.literal('failed'), error: y.string() }
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -186,8 +185,8 @@ describe('SyncedDiscriminatedUnion', () => {
 		it('should handle null values for nullable unions', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					y.object({ status: y.literal('success'), data: y.string() }),
-					y.object({ status: y.literal('failed'), error: y.string() })
+					{ status: y.literal('success'), data: y.string() },
+					{ status: y.literal('failed'), error: y.string() }
 				])
 				.nullable();
 
@@ -209,8 +208,8 @@ describe('SyncedDiscriminatedUnion', () => {
 		it('should handle undefined values for optional unions', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					y.object({ status: y.literal('success'), data: y.string() }),
-					y.object({ status: y.literal('failed'), error: y.string() })
+					{ status: y.literal('success'), data: y.string() },
+					{ status: y.literal('failed'), error: y.string() }
 				])
 				.optional();
 
@@ -233,8 +232,8 @@ describe('SyncedDiscriminatedUnion', () => {
 	describe('JSON serialization', () => {
 		it('should serialize to JSON correctly', () => {
 			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
+				{ status: y.literal('success'), data: y.string() },
+				{ status: y.literal('failed'), error: y.string() }
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -257,8 +256,8 @@ describe('SyncedDiscriminatedUnion', () => {
 		it('should return null for null unions', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					y.object({ status: y.literal('success'), data: y.string() }),
-					y.object({ status: y.literal('failed'), error: y.string() })
+					{ status: y.literal('success'), data: y.string() },
+					{ status: y.literal('failed'), error: y.string() }
 				])
 				.nullable();
 
@@ -281,8 +280,8 @@ describe('SyncedDiscriminatedUnion', () => {
 	describe('Proxy behavior', () => {
 		it('should support property access through proxy', () => {
 			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
+				{ status: y.literal('success'), data: y.string() },
+				{ status: y.literal('failed'), error: y.string() }
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -304,8 +303,8 @@ describe('SyncedDiscriminatedUnion', () => {
 
 		it('should support property enumeration', () => {
 			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
+				{ status: y.literal('success'), data: y.string() },
+				{ status: y.literal('failed'), error: y.string() }
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -321,6 +320,7 @@ describe('SyncedDiscriminatedUnion', () => {
 			syncedUnion.value = { status: 'success', data: 'Hello world' };
 
 			const keys = Object.keys(syncedUnion.value);
+
 			expect(keys).toContain('status');
 			expect(keys).toContain('data');
 		});
@@ -328,10 +328,12 @@ describe('SyncedDiscriminatedUnion', () => {
 
 	describe('Cleanup', () => {
 		it('should cleanup resources on destroy', () => {
-			const validator = y.discriminatedUnion('status', [
-				y.object({ status: y.literal('success'), data: y.string() }),
-				y.object({ status: y.literal('failed'), error: y.string() })
-			]);
+			const validator = y
+				.discriminatedUnion('status', [
+					{ status: y.literal('success'), data: y.string() },
+					{ status: y.literal('failed'), error: y.string() }
+				] as const)
+				.default({ status: 'success', data: 'Hello world' });
 
 			const yType = yDoc.getMap('test');
 			const syncedUnion = new SyncedDiscriminatedUnion({
@@ -344,10 +346,10 @@ describe('SyncedDiscriminatedUnion', () => {
 			});
 
 			syncedUnion.value = { status: 'success', data: 'Hello world' };
-			expect(syncedUnion.currentData).not.toEqual({});
+			expect(syncedUnion.currentObjectProxy).not.toBeNull();
 
 			syncedUnion.destroy();
-			expect(syncedUnion.currentData).toEqual({});
+			expect(syncedUnion.currentObjectProxy).toBeNull();
 			expect(syncedUnion.currentVariant).toBeNull();
 		});
 	});

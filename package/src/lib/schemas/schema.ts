@@ -15,7 +15,8 @@ import { MapValidator, type MapSchema } from './map.js';
 import { LiteralValidator, type LiteralSchema } from './literal.js';
 import {
 	DiscriminatedUnionValidator,
-	type DiscriminatedUnionSchema
+	type DiscriminatedUnionSchema,
+	type InferDiscriminatedUnionType
 } from './discriminatedUnion.js';
 
 export type Schema =
@@ -54,7 +55,7 @@ export const y = {
 	set: <T extends PrimitiveValidator>(shape: T) => new SetValidator<T>(shape),
 	map: <T extends Validator>(shape: T) => new MapValidator<T>(shape),
 	literal: <T extends string | number | boolean>(value: T) => new LiteralValidator<T>(value),
-	discriminatedUnion: <K extends string, T extends readonly ObjectValidator<any>[]>(
+	discriminatedUnion: <K extends string, T extends ObjectShape[]>(
 		discriminantKey: K,
 		variants: T
 	) => new DiscriminatedUnionValidator<K, T>(discriminantKey, variants)
@@ -96,10 +97,10 @@ type NORO<N extends boolean, O extends boolean, T> = N extends true
 		: T;
 
 export type InferSchemaType<T> =
-	T extends ObjectValidator<infer Shape, infer O, infer N>
-		? NORO<N, O, SchemaOutput<Shape>>
-		: T extends DiscriminatedUnionValidator<infer K, infer Variants, infer O, infer N>
-			? NORO<N, O, import('./discriminatedUnion.js').InferDiscriminatedUnionType<K, Variants>>
+	T extends DiscriminatedUnionValidator<infer K, infer Variants, infer O, infer N>
+		? NORO<N, O, InferDiscriminatedUnionType<Variants>>
+		: T extends ObjectValidator<infer Shape, infer O, infer N>
+			? NORO<N, O, SchemaOutput<Shape>>
 			: T extends BaseValidator<infer S, infer O, infer N>
 				? NORO<N, O, S extends BaseSchema<infer T> ? T : never>
 				: T extends ArrayValidator<infer Shape>
@@ -114,3 +115,7 @@ export type SchemaOutput<T extends ObjectShape> = Simplify<{
 	[K in keyof T]: InferSchemaType<T[K]>;
 }> &
 	Getters<'object', T>;
+
+export type RawSchemaOutput<T extends ObjectShape> = Simplify<{
+	[K in keyof T]: InferSchemaType<T[K]>;
+}>;

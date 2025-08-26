@@ -27,7 +27,8 @@ export const getInitialStringifiedValue = (value: any, validator: Validator) => 
 		validator.$schema.kind === 'array' ||
 		validator.$schema.kind === 'object' ||
 		validator.$schema.kind === 'map' ||
-		validator.$schema.kind === 'set'
+		validator.$schema.kind === 'set' ||
+		validator.$schema.kind === 'discriminatedUnion'
 	) {
 		return undefined;
 	}

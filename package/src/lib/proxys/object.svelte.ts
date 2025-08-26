@@ -215,9 +215,15 @@ export class SyncedObject {
 				}
 				if (action === 'add') {
 					// If a new key is added to the object and is valid, integrate it
+					const validator = this.validator.$schema.shape[key];
+					if (!validator || !validator.$schema) {
+						// Skip keys that don't have valid validators (can happen during variant switching)
+						return;
+					}
+
 					const syncroState = createSyncroState({
 						key,
-						validator: this.validator.$schema.shape[key] as Validator,
+						validator: validator as Validator,
 						state: this.state,
 						parent: this
 					});

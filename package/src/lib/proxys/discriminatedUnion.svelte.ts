@@ -1,7 +1,8 @@
 import * as Y from 'yjs';
 import type { DiscriminatedUnionValidator } from '../schemas/discriminatedUnion.js';
 import type { ObjectValidator } from '../schemas/object.js';
-import type { State } from './syncroState.svelte.js';
+import { type State } from './syncroState.svelte.js';
+import { SyncedObject } from './object.svelte.js';
 import type { SyncedContainer } from './common.js';
 import { logError } from '../utils.js';
 import { NULL_OBJECT } from '$lib/constants.js';
@@ -10,69 +11,29 @@ export class SyncedDiscriminatedUnion {
 	state: State;
 	validator: DiscriminatedUnionValidator<any, any>;
 	yType: Y.Map<any>;
+	currentObjectProxy: SyncedObject | null = $state(null);
 	currentVariant: ObjectValidator<any> | null = $state(null);
-	currentData: Record<string, any> = $state({});
 	proxy: any;
 	parent: SyncedContainer;
 	key: string | number;
 	isNull: boolean = $state(false);
 
+	// Simple forwarding - discriminated union doesn't manage properties directly
 	deleteProperty = (target: any, p: any) => {
-		// For discriminated unions, we manage the data directly
-		if (this.currentVariant && typeof p === 'string' && p in this.currentVariant.$schema.shape) {
-			const validator = this.currentVariant.$schema.shape[p];
-			if (validator.$schema.optional) {
-				this.state.transaction(() => {
-					delete this.currentData[p];
-					this.syncToYjs();
-				});
-				return true;
-			}
-		}
-		return false;
+		return this.currentObjectProxy?.deleteProperty(target, p) || false;
 	};
 
 	setNull() {
 		this.isNull = true;
+		this.currentObjectProxy?.destroy();
+		this.currentObjectProxy = null;
 		this.currentVariant = null;
-		this.currentData = {};
 		this.yType.set(NULL_OBJECT, new Y.Text(NULL_OBJECT));
 	}
 
-	// Sync current data to Yjs
-	syncToYjs() {
-		// Clear all existing keys first
-		for (const key of this.yType.keys()) {
-			if (key !== NULL_OBJECT) {
-				this.yType.delete(key);
-			}
-		}
-
-		// Set new data
-		for (const [key, value] of Object.entries(this.currentData)) {
-			const textValue = typeof value === 'string' ? value : JSON.stringify(value);
-			this.yType.set(key, new Y.Text(textValue));
-		}
-	}
-
-	// Sync from Yjs to current data
-	syncFromYjs() {
-		this.currentData = {};
-		for (const [key, yValue] of this.yType.entries()) {
-			if (key !== NULL_OBJECT && yValue instanceof Y.Text) {
-				const textValue = yValue.toString();
-				try {
-					// Try to parse as JSON, fallback to string
-					this.currentData[key] = JSON.parse(textValue);
-				} catch {
-					this.currentData[key] = textValue;
-				}
-			}
-		}
-	}
-
+	// Find which variant matches the discriminant value
 	private getVariantByDiscriminant(discriminantValue: any): ObjectValidator<any> | null {
-		for (const variant of this.validator.$schema.variants) {
+		for (const variant of this.validator.$schema.variantValidators) {
 			const discriminantValidator = variant.$schema.shape[this.validator.$schema.discriminantKey];
 			if (discriminantValidator && discriminantValidator.isValid(discriminantValue)) {
 				return variant;
@@ -84,10 +45,17 @@ export class SyncedDiscriminatedUnion {
 	set value(input: any) {
 		const { isValid, value } = this.validator.parse(input);
 
+		console.log({ value });
+
 		if (!isValid) {
 			logError('Invalid discriminated union value', { value });
 			return;
 		}
+
+		const isAnotherVariant =
+			value &&
+			input?.[this.validator.$schema.discriminantKey] !==
+				this.value?.[this.validator.$schema.discriminantKey];
 
 		this.state.transaction(() => {
 			if (!value) {
@@ -102,7 +70,7 @@ export class SyncedDiscriminatedUnion {
 					this.yType.delete(NULL_OBJECT);
 				}
 
-				// Get the discriminant value to determine which variant to use
+				// Find the matching variant
 				const discriminantValue = value[this.validator.$schema.discriminantKey];
 				const matchingVariant = this.getVariantByDiscriminant(discriminantValue);
 
@@ -111,10 +79,27 @@ export class SyncedDiscriminatedUnion {
 					return;
 				}
 
-				// Update the variant and data
-				this.currentVariant = matchingVariant;
-				this.currentData = { ...value };
-				this.syncToYjs();
+				// Only recreate the object proxy if the variant changed
+				if (this.currentVariant !== matchingVariant) {
+					// Destroy the old proxy first
+					this.currentObjectProxy?.destroy();
+
+					this.currentVariant = matchingVariant;
+					this.currentObjectProxy = new SyncedObject({
+						validator: matchingVariant,
+						yType: this.yType, // Share the same yType
+						parent: this.parent,
+						key: this.key,
+						state: this.state,
+						observe: true, // Let SyncedObject handle observation
+						value
+					});
+				}
+
+				// Set the value on the object proxy - this will handle the Yjs sync
+				if (this.currentObjectProxy) {
+					this.currentObjectProxy.value = value;
+				}
 			}
 		});
 	}
@@ -149,6 +134,7 @@ export class SyncedDiscriminatedUnion {
 		this.validator = validator;
 		this.yType = yType;
 
+		// Proxy forwards everything to the current object proxy
 		this.proxy = new Proxy(
 			{},
 			{
@@ -163,145 +149,166 @@ export class SyncedDiscriminatedUnion {
 						return () => Object.fromEntries(yType.entries());
 					}
 					if (prop === 'toJSON') {
-						return this.toJSON();
+						return this.toJSON.bind(this);
 					}
 
-					// Forward property access to the current data
-					if (this.currentData && typeof prop === 'string') {
-						return this.currentData[prop];
+					// Forward to current object proxy
+					if (this.currentObjectProxy) {
+						return this.currentObjectProxy.value[prop];
 					}
 					return undefined;
 				},
 				set: (target: any, prop: any, newValue: any) => {
-					if (!this.currentVariant || typeof prop !== 'string') {
-						return false;
-					}
-
-					// Validate the property exists in the current variant
-					if (!(prop in this.currentVariant.$schema.shape)) {
-						return false;
-					}
-
-					// Special handling for discriminant property changes
-					if (prop === this.validator.$schema.discriminantKey) {
-						// Need to potentially switch variants
-						const newVariant = this.getVariantByDiscriminant(newValue);
-						if (newVariant && newVariant !== this.currentVariant) {
-							// Create new object with the discriminant change
-							const newObject = { ...this.currentData, [prop]: newValue };
+					if (this.currentObjectProxy) {
+						// Special handling for discriminant property changes
+						if (prop === this.validator.$schema.discriminantKey) {
+							// Get current value and update discriminant
+							const currentValue = this.toJSON();
+							const newObject = { ...currentValue, [prop]: newValue };
 							this.value = newObject;
 							return true;
 						}
-					}
 
-					// Normal property update within the same variant
-					this.state.transaction(() => {
-						this.currentData[prop] = newValue;
-						this.syncToYjs();
-					});
-					return true;
-				},
-				deleteProperty: this.deleteProperty,
-				has: (target: any, prop: any) => {
-					if (this.currentData && typeof prop === 'string') {
-						return prop in this.currentData;
+						// Normal property update - forward to object
+						this.currentObjectProxy.value[prop] = newValue;
+						return true;
 					}
 					return false;
 				},
-				getOwnPropertyDescriptor(target: any, prop: any) {
-					console.log('DESCRIPTOR: prop:', prop, 'currentData:', JSON.stringify(this.currentData));
-					if (this.currentData && typeof prop === 'string' && prop in this.currentData) {
-						const descriptor = {
-							enumerable: true,
-							configurable: true,
-							writable: true,
-							value: this.currentData[prop]
-						};
-						console.log('DESCRIPTOR: returning:', descriptor);
-						return descriptor;
+				deleteProperty: this.deleteProperty,
+				has: (target: any, prop: any) => {
+					if (this.currentObjectProxy && this.currentVariant) {
+						// Only return true for properties that exist in the current variant's shape
+						return prop in this.currentVariant.$schema.shape;
 					}
-					console.log('DESCRIPTOR: returning undefined');
+					return false;
+				},
+				getOwnPropertyDescriptor: (target: any, prop: any) => {
+					if (this.currentObjectProxy) {
+						return Object.getOwnPropertyDescriptor(this.currentObjectProxy.value, prop);
+					}
 					return undefined;
 				},
-				ownKeys: () => {
-					console.log('OWNKEYS: currentData:', JSON.stringify(this.currentData));
-					console.log('OWNKEYS: isNull:', this.isNull);
-					if (this.currentData) {
-						const keys = Object.keys(this.currentData);
-						console.log('OWNKEYS: returning keys:', keys);
-						return keys;
+				ownKeys: (target: any) => {
+					if (this.currentObjectProxy && this.currentVariant) {
+						// Only return keys that exist in the current variant's shape
+						return Object.keys(this.currentVariant.$schema.shape);
 					}
-					console.log('OWNKEYS: returning empty array');
 					return [];
 				}
 			}
 		);
 
+		// Set up observation for collaboration if needed
 		if (observe) {
 			yType.observe(this.observe);
 			this.sync(value);
+		} else if (value) {
+			this.value = value;
 		}
 	}
-
-	observe = (e: Y.YMapEvent<any>, _transaction: Y.Transaction) => {
-		if (_transaction.origin !== this.state.transactionKey) {
-			if (this.yType.has(NULL_OBJECT)) {
-				this.isNull = true;
-				this.currentData = {};
-				this.currentVariant = null;
-				return;
-			}
-			// Sync from Yjs changes
-			this.syncFromYjs();
-			// Determine current variant from the data
-			if (this.currentData[this.validator.$schema.discriminantKey]) {
-				const discriminantValue = this.currentData[this.validator.$schema.discriminantKey];
-				this.currentVariant = this.getVariantByDiscriminant(discriminantValue);
-			}
-		}
-	};
 
 	toJSON = () => {
 		if (this.isNull) {
 			return null;
 		}
-		return { ...this.currentData };
+		if (this.currentObjectProxy) {
+			return this.currentObjectProxy.toJSON();
+		}
+		return null;
 	};
 
-	sync = (value?: any) => {
-		this.state.transaction(() => {
-			this.currentData = {};
+	// Observer for external Yjs changes - ONLY handle discriminant changes
+	observe = (e: Y.YMapEvent<any>, _transaction: Y.Transaction) => {
+		// Only handle external changes (not our own)
+		if (_transaction.origin !== this.state.transactionKey) {
+			const discriminantKey = this.validator.$schema.discriminantKey;
+
+			// Check if this might be a variant switch by checking the discriminant value
+			let shouldSync = false;
+
+			if (e.changes.keys.has(discriminantKey) || !this.currentVariant) {
+				// Discriminant key changed or no variant yet - definitely sync
+				shouldSync = true;
+			} else if (e.changes.keys.size > 0) {
+				// Some other keys changed - check if discriminant value implies a different variant
+				const currentDiscriminantValue = this.yType.get(discriminantKey);
+				if (currentDiscriminantValue instanceof Y.Text) {
+					let discriminantValue;
+					try {
+						discriminantValue = JSON.parse(currentDiscriminantValue.toString());
+					} catch {
+						discriminantValue = currentDiscriminantValue.toString();
+					}
+					const matchingVariant = this.getVariantByDiscriminant(discriminantValue);
+					if (matchingVariant && this.currentVariant !== matchingVariant) {
+						shouldSync = true;
+					}
+				}
+			}
+
+			if (shouldSync) {
+				this.syncFromExternalChange();
+			}
+		}
+	};
+
+	// Handle external changes by recreating the correct variant
+	private syncFromExternalChange() {
+		if (this.yType.has(NULL_OBJECT)) {
+			this.isNull = true;
+			this.currentObjectProxy?.destroy();
+			this.currentObjectProxy = null;
 			this.currentVariant = null;
+			return;
+		}
 
-			if (this.yType.has(NULL_OBJECT)) {
-				this.isNull = true;
-				return;
+		// Get discriminant value from Yjs
+		const discriminantKey = this.validator.$schema.discriminantKey;
+		const yValue = this.yType.get(discriminantKey);
+		if (yValue instanceof Y.Text) {
+			const textValue = yValue.toString();
+			let discriminantValue;
+			try {
+				discriminantValue = JSON.parse(textValue);
+			} catch {
+				discriminantValue = textValue;
 			}
 
-			// If we have a value, use it directly
-			if (value && typeof value === 'object') {
-				const discriminantValue = value[this.validator.$schema.discriminantKey];
-				const matchingVariant = this.getVariantByDiscriminant(discriminantValue);
-
-				if (matchingVariant) {
-					this.currentVariant = matchingVariant;
-					this.currentData = { ...value };
-					this.syncToYjs();
-				}
-			} else {
-				// Sync from existing Yjs data
-				this.syncFromYjs();
-				if (this.currentData[this.validator.$schema.discriminantKey]) {
-					const discriminantValue = this.currentData[this.validator.$schema.discriminantKey];
-					this.currentVariant = this.getVariantByDiscriminant(discriminantValue);
-				}
+			const matchingVariant = this.getVariantByDiscriminant(discriminantValue);
+			if (matchingVariant && this.currentVariant !== matchingVariant) {
+				// Destroy old variant and create new one
+				this.currentObjectProxy?.destroy();
+				this.currentVariant = matchingVariant;
+				this.currentObjectProxy = new SyncedObject({
+					validator: matchingVariant,
+					yType: this.yType,
+					parent: this.parent,
+					key: this.key,
+					state: this.state,
+					observe: true // Let the object handle its own observation
+				});
+				// Trigger sync to pick up existing data
+				this.currentObjectProxy.sync();
+				this.isNull = false;
 			}
-		});
+		}
+	}
+
+	sync = (value?: any) => {
+		// For discriminated union, handle initial sync from existing data
+		if (value && typeof value === 'object') {
+			this.value = value;
+		} else {
+			// Check if there's existing data in Yjs
+			this.syncFromExternalChange();
+		}
 	};
 
 	destroy = () => {
 		this.yType.unobserve(this.observe);
-		this.currentData = {};
+		this.currentObjectProxy?.destroy();
+		this.currentObjectProxy = null;
 		this.currentVariant = null;
 	};
 }
