@@ -1,6 +1,7 @@
 <script>
 	import { browser } from '$app/environment';
 	import Canvas from '$lib/canvas.svelte';
+	import DiscriminatedUnionDemo from '$lib/DiscriminatedUnionDemo.svelte';
 	import { onMount } from 'svelte';
 	import { fade } from 'svelte/transition';
 	import Usage from './Usage.svelte';
@@ -59,6 +60,20 @@
 			{#if browser}
 				<Canvas />
 			{/if}
+		</section>
+
+		<section id="discriminated-union-demo" class="border-t border-white/10 py-24">
+			<div class="container mx-auto px-6">
+				<h2 class="mb-6 text-center text-3xl font-bold">Discriminated Union Demo</h2>
+				<p class="mb-8 text-center text-lg text-white/70">
+					See how discriminated unions provide type-safe state management for complex scenarios like
+					API responses and user types.
+				</p>
+
+				{#if browser}
+					<DiscriminatedUnionDemo />
+				{/if}
+			</div>
 		</section>
 
 		<section id="about" class="border-t border-white/10 py-24">

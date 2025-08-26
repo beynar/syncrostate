@@ -18,5 +18,7 @@ type LayoutParentData = EnsureDefined<{}>;
 
 export type PageServerData = null;
 export type PageData = Expand<PageParentData>;
+export type PageProps = { params: RouteParams; data: PageData }
 export type LayoutServerData = null;
 export type LayoutData = Expand<LayoutParentData>;
+export type LayoutProps = { params: LayoutParams; data: LayoutData; children: import("svelte").Snippet }

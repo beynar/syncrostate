@@ -92,6 +92,7 @@ export const getInstance = (validator: Validator): (new () => Y.AbstractType<any
 	switch (validator.$schema.kind) {
 		case 'map':
 		case 'object':
+		case 'discriminatedUnion':
 			return Y.Map;
 		case 'set':
 		case 'array':

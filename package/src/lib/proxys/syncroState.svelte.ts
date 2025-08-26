@@ -25,6 +25,9 @@ import type { SetValidator } from '../schemas/set.js';
 import { Presence, type PresenceUser } from '$lib/presence.svelte.js';
 import { SyncedMap } from './map.svelte.js';
 import type { MapValidator } from '$lib/schemas/map.js';
+import type { LiteralValidator } from '../schemas/literal.js';
+import type { DiscriminatedUnionValidator } from '../schemas/discriminatedUnion.js';
+import { SyncedDiscriminatedUnion } from './discriminatedUnion.svelte.js';
 
 export type SyncroStates =
 	| SyncedText
@@ -35,7 +38,8 @@ export type SyncroStates =
 	| SyncedObject
 	| SyncedArray
 	| SyncedSet
-	| SyncedMap;
+	| SyncedMap
+	| SyncedDiscriminatedUnion;
 
 // For testing purpose
 const safeSetContext = (key: string, value: any) => {
@@ -262,6 +266,26 @@ export const createSyncroState = ({
 			return new SyncedMap({
 				yType: type as Y.Map<any>,
 				validator: validator as MapValidator<any>,
+				value,
+				parent,
+				key,
+				state
+			});
+		}
+		case 'literal': {
+			// Literals are stored as text since they're primitive values
+			return new SyncedText({
+				yType: type as Y.Text,
+				validator: validator as LiteralValidator<any> as any,
+				parent,
+				key,
+				state
+			});
+		}
+		case 'discriminatedUnion': {
+			return new SyncedDiscriminatedUnion({
+				yType: type as Y.Map<any>,
+				validator: validator as DiscriminatedUnionValidator<any, any>,
 				value,
 				parent,
 				key,
