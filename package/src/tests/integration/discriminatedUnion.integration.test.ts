@@ -5,8 +5,8 @@ import * as Y from 'yjs';
 describe('DiscriminatedUnion Integration Tests', () => {
 	it('should work with the full syncroState system', () => {
 		const apiResponseSchema = y.discriminatedUnion('status', [
-			{ status: y.literal('success'), data: y.string() },
-			{ status: y.literal('error'), message: y.string() }
+			y.object({ status: y.literal('success'), data: y.string() }),
+			y.object({ status: y.literal('error'), message: y.string() })
 		]);
 
 		const schema = {
@@ -27,7 +27,9 @@ describe('DiscriminatedUnion Integration Tests', () => {
 		expect(state1.response.status).toBe('success');
 		expect(state1.response.data).toBe('Hello world');
 		expect(state2.response.status).toBe('success');
-		expect(state2.response.data).toBe('Hello world');
+		if (state2.response.status === 'success') {
+			expect(state2.response.data).toBe('Hello world');
+		}
 
 		// Test switching to error variant
 		state1.response = { status: 'error', message: 'Something went wrong' };
@@ -35,7 +37,9 @@ describe('DiscriminatedUnion Integration Tests', () => {
 		expect(state1.response.status).toBe('error');
 		expect(state1.response.message).toBe('Something went wrong');
 		expect(state2.response.status).toBe('error');
-		expect(state2.response.message).toBe('Something went wrong');
+		if (state2.response.status === 'error') {
+			expect(state2.response.message).toBe('Something went wrong');
+		}
 
 		// Test property access
 		expect('status' in state1.response).toBe(true);
@@ -59,8 +63,8 @@ describe('DiscriminatedUnion Integration Tests', () => {
 		const schema = {
 			result: y
 				.discriminatedUnion('type', [
-					{ type: y.literal('data'), value: y.string() },
-					{ type: y.literal('error'), code: y.number() }
+					y.object({ type: y.literal('data'), value: y.string() }),
+					y.object({ type: y.literal('error'), code: y.number() })
 				])
 				.nullable()
 		};
@@ -80,9 +84,9 @@ describe('DiscriminatedUnion Integration Tests', () => {
 
 	it('should handle complex nested discriminated unions', () => {
 		const userSchema = y.discriminatedUnion('role', [
-			{ role: y.literal('admin'), name: y.string(), permissions: y.array(y.string()) },
-			{ role: y.literal('user'), name: y.string(), email: y.string() },
-			{ role: y.literal('guest'), sessionId: y.string() }
+			y.object({ role: y.literal('admin'), name: y.string(), permissions: y.array(y.string()) }),
+			y.object({ role: y.literal('user'), name: y.string(), email: y.string() }),
+			y.object({ role: y.literal('guest'), sessionId: y.string() })
 		]);
 
 		const schema = { user: userSchema };
@@ -98,8 +102,10 @@ describe('DiscriminatedUnion Integration Tests', () => {
 		};
 
 		expect(state2.user.role).toBe('admin');
-		expect(state2.user.name).toBe('John Admin');
-		expect(state2.user.permissions).toEqual(['read', 'write', 'delete']);
+		if (state2.user.role === 'admin') {
+			expect(state2.user.name).toBe('John Admin');
+			expect(state2.user.permissions).toEqual(['read', 'write', 'delete']);
+		}
 
 		// Test switching to regular user
 		state1.user = {
@@ -109,8 +115,10 @@ describe('DiscriminatedUnion Integration Tests', () => {
 		};
 
 		expect(state2.user.role).toBe('user');
-		expect(state2.user.name).toBe('Jane User');
-		expect(state2.user.email).toBe('jane@example.com');
+		if (state2.user.role === 'user') {
+			expect(state2.user.name).toBe('Jane User');
+			expect(state2.user.email).toBe('jane@example.com');
+		}
 		expect('permissions' in state2.user).toBe(false);
 
 		// Test switching to guest
@@ -120,7 +128,9 @@ describe('DiscriminatedUnion Integration Tests', () => {
 		};
 
 		expect(state2.user.role).toBe('guest');
-		expect(state2.user.sessionId).toBe('guest-123');
+		if (state2.user.role === 'guest') {
+			expect(state2.user.sessionId).toBe('guest-123');
+		}
 		expect('name' in state2.user).toBe(false);
 		expect('email' in state2.user).toBe(false);
 	});

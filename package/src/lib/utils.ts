@@ -65,6 +65,7 @@ export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>(
 	const instance = getInstance(validator) as new () => Y.Array<any> | Y.Map<any> | Y.Text;
 	const isText = instance === Y.Text;
 	const stringifiedValue = getInitialStringifiedValue(value, validator);
+
 	const type = isText ? new Y.Text(stringifiedValue) : new instance();
 	const typeInParent = (isArray ? parent.get(Number(key)) : parent.get(String(key))) as T;
 

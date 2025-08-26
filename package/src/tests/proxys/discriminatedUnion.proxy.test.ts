@@ -48,8 +48,8 @@ describe('SyncedDiscriminatedUnion', () => {
 	describe('Basic functionality', () => {
 		it('should create a discriminated union proxy', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('failed'), error: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('failed'), error: y.string() })
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -64,13 +64,13 @@ describe('SyncedDiscriminatedUnion', () => {
 
 			expect(syncedUnion).toBeDefined();
 			expect(syncedUnion.validator).toBe(validator);
-			expect(syncedUnion.currentVariant).toBeNull();
+			expect(syncedUnion.currentVariant).toBe(validator.$schema.variantValidators[0]);
 		});
 
 		it('should set and get success variant values', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('failed'), error: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('failed'), error: y.string() })
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -93,8 +93,8 @@ describe('SyncedDiscriminatedUnion', () => {
 
 		it('should set and get failed variant values', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('failed'), error: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('failed'), error: y.string() })
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -119,8 +119,8 @@ describe('SyncedDiscriminatedUnion', () => {
 	describe('Variant switching', () => {
 		it('should switch variants when discriminant changes', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('failed'), error: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('failed'), error: y.string() })
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -154,8 +154,8 @@ describe('SyncedDiscriminatedUnion', () => {
 
 		it('should handle property updates within the same variant', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('failed'), error: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('failed'), error: y.string() })
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -185,8 +185,8 @@ describe('SyncedDiscriminatedUnion', () => {
 		it('should handle null values for nullable unions', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					{ status: y.literal('success'), data: y.string() },
-					{ status: y.literal('failed'), error: y.string() }
+					y.object({ status: y.literal('success'), data: y.string() }),
+					y.object({ status: y.literal('failed'), error: y.string() })
 				])
 				.nullable();
 
@@ -208,8 +208,8 @@ describe('SyncedDiscriminatedUnion', () => {
 		it('should handle undefined values for optional unions', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					{ status: y.literal('success'), data: y.string() },
-					{ status: y.literal('failed'), error: y.string() }
+					y.object({ status: y.literal('success'), data: y.string() }),
+					y.object({ status: y.literal('failed'), error: y.string() })
 				])
 				.optional();
 
@@ -232,8 +232,8 @@ describe('SyncedDiscriminatedUnion', () => {
 	describe('JSON serialization', () => {
 		it('should serialize to JSON correctly', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('failed'), error: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('failed'), error: y.string() })
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -256,8 +256,8 @@ describe('SyncedDiscriminatedUnion', () => {
 		it('should return null for null unions', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					{ status: y.literal('success'), data: y.string() },
-					{ status: y.literal('failed'), error: y.string() }
+					y.object({ status: y.literal('success'), data: y.string() }),
+					y.object({ status: y.literal('failed'), error: y.string() })
 				])
 				.nullable();
 
@@ -280,8 +280,8 @@ describe('SyncedDiscriminatedUnion', () => {
 	describe('Proxy behavior', () => {
 		it('should support property access through proxy', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('failed'), error: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('failed'), error: y.string() })
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -303,8 +303,8 @@ describe('SyncedDiscriminatedUnion', () => {
 
 		it('should support property enumeration', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('failed'), error: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('failed'), error: y.string() })
 			]);
 
 			const yType = yDoc.getMap('test');
@@ -330,9 +330,9 @@ describe('SyncedDiscriminatedUnion', () => {
 		it('should cleanup resources on destroy', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					{ status: y.literal('success'), data: y.string() },
-					{ status: y.literal('failed'), error: y.string() }
-				] as const)
+					y.object({ status: y.literal('success'), data: y.string() }),
+					y.object({ status: y.literal('failed'), error: y.string() })
+				])
 				.default({ status: 'success', data: 'Hello world' });
 
 			const yType = yDoc.getMap('test');

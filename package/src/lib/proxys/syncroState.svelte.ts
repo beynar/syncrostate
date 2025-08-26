@@ -14,7 +14,7 @@ import type { DateValidator } from '../schemas/date.js';
 import type { BooleanValidator } from '../schemas/boolean.js';
 import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
-import { getTypeFromParent, logError } from '../utils.js';
+import { getInitialStringifiedValue, getTypeFromParent, logError } from '../utils.js';
 import { onMount, setContext } from 'svelte';
 import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '../constants.js';
 import { SyncedArray } from './array.svelte.js';
@@ -173,7 +173,8 @@ export const createSyncroState = ({
 	forceNewType,
 	value,
 	parent,
-	state
+	state,
+	forceValue
 }: {
 	key: string | number;
 	validator: Validator;
@@ -181,8 +182,16 @@ export const createSyncroState = ({
 	forceNewType?: boolean;
 	parent: SyncedContainer;
 	state: State;
+	forceValue?: boolean;
 }): SyncroStates => {
 	const type = getTypeFromParent({ forceNewType, parent: parent.yType, key, validator, value });
+
+	if (forceValue && type instanceof Y.Text) {
+		const stringifiedValue = getInitialStringifiedValue(value, validator);
+		if (stringifiedValue !== type.toString()) {
+			type.applyDelta([{ delete: type.length }, { insert: stringifiedValue }]);
+		}
+	}
 
 	switch (validator.$schema.kind) {
 		default:

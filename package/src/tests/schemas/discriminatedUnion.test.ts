@@ -5,8 +5,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 	describe('Basic functionality', () => {
 		it('should create a discriminated union with simplified syntax', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('error'), message: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('error'), message: y.string() })
 			]);
 
 			expect(validator.$schema.kind).toBe('discriminatedUnion');
@@ -16,8 +16,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 
 		it('should validate success variant correctly', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('error'), message: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('error'), message: y.string() })
 			]);
 
 			const successValue = { status: 'success', data: 'Hello world' };
@@ -26,8 +26,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 
 		it('should validate error variant correctly', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('error'), message: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('error'), message: y.string() })
 			]);
 
 			const errorValue = { status: 'error', message: 'Something went wrong' };
@@ -36,8 +36,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 
 		it('should reject invalid discriminant values', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('error'), message: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('error'), message: y.string() })
 			]);
 
 			const invalidValue = { status: 'invalid', data: 'test' };
@@ -46,8 +46,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 
 		it('should reject missing discriminant key', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('error'), message: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('error'), message: y.string() })
 			]);
 
 			const invalidValue = { data: 'test' };
@@ -59,8 +59,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 		it('should handle nullable discriminated unions', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					{ status: y.literal('success'), data: y.string() },
-					{ status: y.literal('error'), message: y.string() }
+					y.object({ status: y.literal('success'), data: y.string() }),
+					y.object({ status: y.literal('error'), message: y.string() })
 				])
 				.nullable();
 
@@ -71,8 +71,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 		it('should handle optional discriminated unions', () => {
 			const validator = y
 				.discriminatedUnion('status', [
-					{ status: y.literal('success'), data: y.string() },
-					{ status: y.literal('error'), message: y.string() }
+					y.object({ status: y.literal('success'), data: y.string() }),
+					y.object({ status: y.literal('error'), message: y.string() })
 				])
 				.optional();
 
@@ -84,8 +84,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 	describe('Type coercion', () => {
 		it('should coerce valid values correctly', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('error'), message: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('error'), message: y.string() })
 			]);
 
 			const value = { status: 'success', data: 'Hello' };
@@ -95,8 +95,8 @@ describe('DiscriminatedUnion Simplified API', () => {
 
 		it('should return null for invalid values', () => {
 			const validator = y.discriminatedUnion('status', [
-				{ status: y.literal('success'), data: y.string() },
-				{ status: y.literal('error'), message: y.string() }
+				y.object({ status: y.literal('success'), data: y.string() }),
+				y.object({ status: y.literal('error'), message: y.string() })
 			]);
 
 			const invalid = { status: 'invalid', data: 'test' };

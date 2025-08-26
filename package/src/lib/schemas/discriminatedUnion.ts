@@ -4,17 +4,17 @@ import type { SchemaOutput } from './schema.js';
 
 export type DiscriminatedUnionSchema<
 	K extends string,
-	T extends ObjectShape[]
+	T extends ObjectValidator<ObjectShape>[]
 > = BaseSchema<any> & {
 	kind: 'discriminatedUnion';
 	discriminantKey: K;
 	variants: T;
-	variantValidators: ObjectValidator<any>[];
+	variantValidators: ObjectValidator<ObjectShape>[];
 };
 
 export class DiscriminatedUnionValidator<
 	K extends string,
-	T extends ObjectShape[],
+	T extends ObjectValidator<ObjectShape>[],
 	O extends boolean = false,
 	N extends boolean = false
 > {
@@ -22,9 +22,11 @@ export class DiscriminatedUnionValidator<
 
 	constructor(discriminantKey: K, variants: T) {
 		// Convert each variant (plain object shape) to an ObjectValidator
-		const variantValidators = variants.map((variant) => {
-			const validator = new ObjectValidator(variant);
-			if (!(discriminantKey in variant)) {
+		const variantValidators = variants.map((validator) => {
+			if (validator.$schema.kind !== 'object') {
+				throw new Error('All variants must be object validators');
+			}
+			if (!(discriminantKey in validator.$schema.shape)) {
 				throw new Error(
 					`All variants must have the discriminant key "${discriminantKey}" in their shape`
 				);
@@ -135,4 +137,6 @@ export class DiscriminatedUnionValidator<
 }
 
 // Type inference helper for discriminated unions
-export type InferDiscriminatedUnionType<T extends ObjectShape[]> = SchemaOutput<T[number]>;
+export type InferDiscriminatedUnionType<T extends ObjectValidator<ObjectShape>[]> = SchemaOutput<
+	T[number]['$schema']['shape']
+>;

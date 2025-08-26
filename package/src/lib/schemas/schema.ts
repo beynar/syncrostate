@@ -55,7 +55,7 @@ export const y = {
 	set: <T extends PrimitiveValidator>(shape: T) => new SetValidator<T>(shape),
 	map: <T extends Validator>(shape: T) => new MapValidator<T>(shape),
 	literal: <T extends string | number | boolean>(value: T) => new LiteralValidator<T>(value),
-	discriminatedUnion: <K extends string, T extends ObjectShape[]>(
+	discriminatedUnion: <K extends string, T extends ObjectValidator<ObjectShape>[]>(
 		discriminantKey: K,
 		variants: T
 	) => new DiscriminatedUnionValidator<K, T>(discriminantKey, variants)
