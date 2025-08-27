@@ -136,3 +136,51 @@ describe('DiscriminatedUnion Integration Tests', () => {
 		expect('email' in state2.user).toBe(false);
 	});
 });
+
+describe('DiscriminatedUnion Integration Tests Complex', () => {
+	it('should work with nested containers', () => {
+		const apiResponseSchema = y.discriminatedUnion('status', [
+			y.object({
+				status: y.literal('success'),
+				data: y.string(),
+				nested: y.object({ nested: y.string() })
+			}),
+			y.object({
+				status: y.literal('error'),
+				message: y.string(),
+				nested: y.array(y.object({ nested: y.string() }))
+			})
+		]);
+
+		const schema = {
+			response: apiResponseSchema
+		};
+
+		const doc = new Y.Doc();
+		const state1 = syncroState({ schema, doc });
+		const state2 = syncroState({ schema, doc });
+
+		state1.response = { status: 'success', data: 'Hello world', nested: { nested: 'nested' } };
+
+		expect(state2.response.status).toBe('success');
+
+		if (state2.response.status === 'success') {
+			expect(state2.response.nested.nested).toBe('nested');
+		} else {
+			expect(true).toBe(false);
+		}
+
+		state1.response = {
+			status: 'error',
+			message: 'Something went wrong',
+			nested: [{ nested: 'nested' }]
+		};
+
+		if (state2.response.status === 'error') {
+			expect(state2.response.nested[0].nested).toBe('nested');
+			expect('nested' in state2.response.nested).toBe(false);
+		} else {
+			expect(true).toBe(false);
+		}
+	});
+});

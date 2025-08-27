@@ -160,10 +160,16 @@ export class SyncedDiscriminatedUnion {
 			this.swapValidator(discriminantValue);
 		}
 		const objectProxy = this.objectProxy;
-		if (!objectProxy) {
-			return;
-		}
+		if (!objectProxy) return;
+
 		const shape = this.currentVariant!.$schema.shape;
+
+		Object.keys(objectProxy.syncroStates).forEach((k) => {
+			if (!(k in shape)) {
+				objectProxy.syncroStates[k].destroy();
+				delete objectProxy.syncroStates[k];
+			}
+		});
 
 		Object.entries(shape).forEach(([key, validator]) => {
 			const syncedState = objectProxy.syncroStates[key];

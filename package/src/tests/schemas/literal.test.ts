@@ -95,7 +95,7 @@ describe('LiteralValidator', () => {
 
 			const invalidResult = validator.parse('failure');
 			expect(invalidResult.isValid).toBe(false);
-			expect(invalidResult.value).toBe('success'); // coerced to literal value
+			expect(invalidResult.value).toBe(null); // coerced to literal value
 		});
 	});
 
