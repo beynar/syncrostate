@@ -38,7 +38,16 @@ export class SyncedDiscriminatedUnion {
 			return;
 		}
 		if (!value) {
-			this.objectProxy!.value = value;
+			if (!value) {
+				// Let discriminated union handle null and undefined
+				// It can be nullable or optional
+				// But the underlying object proxy can or can not reflect that aspect
+				if (value === undefined) {
+					this.parent.deleteProperty({}, this.key);
+				} else {
+					this.objectProxy!.setNull();
+				}
+			}
 		} else {
 			const newDiscriminantValue =
 				this.validator.$schema.discriminantKey in value &&
@@ -151,22 +160,19 @@ export class SyncedDiscriminatedUnion {
 			this.swapValidator(discriminantValue);
 		}
 		const objectProxy = this.objectProxy;
-		console.log('observe and repair');
 		if (!objectProxy) {
 			return;
 		}
 		const shape = this.currentVariant!.$schema.shape;
-		console.log('observe and repair');
+
 		Object.entries(shape).forEach(([key, validator]) => {
 			const syncedState = objectProxy.syncroStates[key];
 			const value = e.target.get(key)?.toString();
-			console.log('observe and repair', { key, value });
 
 			if (!value) {
 				return;
 			}
 			if (!syncedState) {
-				console.log('create', { key });
 				objectProxy.syncroStates[key] = createSyncroState({
 					key,
 					validator: validator as Validator,
@@ -176,7 +182,6 @@ export class SyncedDiscriminatedUnion {
 				});
 			} else {
 				if (syncedState.validator !== shape[key]) {
-					console.log('destroy and create', { key });
 					syncedState.destroy();
 					objectProxy.syncroStates[key] = createSyncroState({
 						key,
@@ -195,6 +200,7 @@ export class SyncedDiscriminatedUnion {
 	};
 
 	destroy = () => {
-		return this.objectProxy!.destroy();
+		this.objectProxy!.destroy();
+		this.objectProxy = null;
 	};
 }

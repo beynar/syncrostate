@@ -41,6 +41,7 @@ describe('DiscriminatedUnion Integration Tests', () => {
 			expect(state2.response.message).toBe('Something went wrong');
 		}
 
+		console.log(JSON.stringify(state1.response, null, 2));
 		// Test property access
 		expect('status' in state1.response).toBe(true);
 		expect('message' in state1.response).toBe(true);

@@ -65,10 +65,14 @@ export class SyncedObject {
 					this.isNull = false;
 					this.yType.delete(NULL_OBJECT);
 				}
-				const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
-				remainingStates.forEach((key) => {
-					this.deleteProperty({}, key);
-				});
+				// Delete syncro states that are not in the new value
+				Object.keys(this.syncroStates)
+					.filter((key) => !(key in value))
+					.forEach((key) => {
+						this.syncroStates[key].destroy();
+						this.yType.delete(key);
+						delete this.syncroStates[key];
+					});
 
 				Object.entries(value).forEach(([key, value]) => {
 					if (key in shape) {
@@ -195,6 +199,7 @@ export class SyncedObject {
 					if (typeof prop !== 'string') {
 						return false;
 					}
+					console.log('has', { prop }, this.yType.has(prop), this.yType.get(prop));
 					return this.yType.has(prop);
 				},
 
@@ -248,6 +253,9 @@ export class SyncedObject {
 	};
 
 	toJSON = () => {
+		if (this.isNull) {
+			return null;
+		}
 		return Object.entries(this.validator.$schema.shape).reduce((acc, [key, validator]) => {
 			const value = this.syncroStates[key]?.value;
 			if (value !== undefined) {

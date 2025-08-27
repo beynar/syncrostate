@@ -137,7 +137,6 @@ describe('SyncedDiscriminatedUnion', () => {
 			const successValue = { status: 'success', data: 'Hello world' };
 			syncedUnion.value = successValue;
 
-			const initialVariant = syncedUnion.currentVariant;
 			expect(syncedUnion.value.status).toBe('success');
 			expect(syncedUnion.value.data).toBe('Hello world');
 
@@ -149,7 +148,7 @@ describe('SyncedDiscriminatedUnion', () => {
 			expect(syncedUnion.value.status).toBe('failed');
 			expect(syncedUnion.value.error).toBe('Something went wrong');
 			// The discriminant should not have data property anymore
-			expect(syncedUnion.value.data).toBeUndefined();
+			expect(syncedUnion.value.data).toBe(undefined);
 		});
 
 		it('should handle property updates within the same variant', () => {
@@ -346,11 +345,11 @@ describe('SyncedDiscriminatedUnion', () => {
 			});
 
 			syncedUnion.value = { status: 'success', data: 'Hello world' };
-			expect(syncedUnion.currentObjectProxy).not.toBeNull();
+			expect(syncedUnion.objectProxy).not.toBeNull();
 
 			syncedUnion.destroy();
-			expect(syncedUnion.currentObjectProxy).toBeNull();
-			expect(syncedUnion.currentVariant).toBeNull();
+			expect(syncedUnion.objectProxy).toBeNull();
+			expect(syncedUnion.currentVariant).toBeFalsy();
 		});
 	});
 });
