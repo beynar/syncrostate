@@ -17,6 +17,7 @@ export class SyncedObject {
 	parent: SyncedContainer;
 	key: string | number;
 	isNull: boolean = $state(false);
+	onObserve?: (e: Y.YMapEvent<any>, _transaction: Y.Transaction) => void;
 
 	deleteProperty = (target: any, p: any) => {
 		if (typeof p !== 'string') {
@@ -39,7 +40,16 @@ export class SyncedObject {
 
 	setNull() {
 		this.isNull = true;
-		this.yType.set(NULL_OBJECT, new Y.Text(NULL_OBJECT));
+		this.state.transaction(() => {
+			// Clear existing keys to avoid stale state
+			Array.from(this.yType.keys()).forEach((k) => {
+				this.yType.delete(k);
+			});
+			// Drop local children to free memory
+			Object.values(this.syncroStates).forEach((s) => s.destroy());
+			this.syncroStates = {};
+			this.yType.set(NULL_OBJECT, new Y.Text(NULL_OBJECT));
+		});
 	}
 
 	set value(input: any) {
@@ -50,9 +60,9 @@ export class SyncedObject {
 			return;
 		}
 
-		const shape = this.validator.$schema.shape;
-
 		this.state.transaction(() => {
+			const shape = this.validator.$schema.shape;
+
 			if (!value) {
 				if (value === undefined) {
 					this.parent.deleteProperty({}, this.key);
@@ -64,15 +74,33 @@ export class SyncedObject {
 					this.isNull = false;
 					this.yType.delete(NULL_OBJECT);
 				}
-				const remainingStates = Object.keys(this.syncroStates).filter((key) => !(key in value));
-				remainingStates.forEach((key) => {
-					this.deleteProperty({}, key);
-				});
+				// Delete syncro states that are not in the new value
+				Object.keys(this.syncroStates)
+					.filter((key) => !(key in value))
+					.forEach((key) => {
+						this.syncroStates[key].destroy();
+						this.yType.delete(key);
+						delete this.syncroStates[key];
+					});
+
 				Object.entries(value).forEach(([key, value]) => {
 					if (key in shape) {
 						const syncroState = this.syncroStates[key];
 						if (syncroState) {
-							syncroState.value = value;
+							if (syncroState.validator.$schema !== shape[key].$schema) {
+								syncroState.destroy();
+								this.syncroStates[key] = createSyncroState({
+									key,
+									validator: shape[key],
+									parent: this,
+									state: this.state,
+									forceValue: true,
+									forceNewType: true,
+									value
+								});
+							} else {
+								syncroState.value = value;
+							}
 						} else {
 							this.syncroStates[key] = createSyncroState({
 								key,
@@ -102,7 +130,8 @@ export class SyncedObject {
 		baseImplementation = {},
 		value,
 		parent,
-		key
+		key,
+		onObserve
 	}: {
 		state: State;
 		observe?: boolean;
@@ -112,6 +141,7 @@ export class SyncedObject {
 		value?: any;
 		parent: SyncedContainer;
 		key: string | number;
+		onObserve?: (e: Y.YMapEvent<any>, _transaction: Y.Transaction) => void;
 	}) {
 		this.parent = parent;
 		this.state = state;
@@ -119,8 +149,7 @@ export class SyncedObject {
 		this.validator = validator;
 		this.yType = yType;
 		this.baseImplementation = baseImplementation;
-
-		const shape = this.validator.$schema.shape;
+		this.onObserve = onObserve;
 
 		this.proxy = new Proxy(
 			{},
@@ -138,7 +167,7 @@ export class SyncedObject {
 					}
 
 					if (prop === 'toJSON') {
-						return this.toJSON();
+						return this.toJSON.bind(this);
 					}
 
 					const syncroState = this.syncroStates[prop];
@@ -161,7 +190,7 @@ export class SyncedObject {
 						this.state.transaction(() => {
 							this.syncroStates[key] = createSyncroState({
 								key,
-								validator: shape[key],
+								validator: this.validator.$schema.shape[key],
 								parent: this,
 								state: this.state,
 								value
@@ -203,6 +232,7 @@ export class SyncedObject {
 	}
 	observe = (e: Y.YMapEvent<any>, _transaction: Y.Transaction) => {
 		if (_transaction.origin !== this.state.transactionKey) {
+			this.onObserve?.(e, _transaction);
 			if (this.yType.has(NULL_OBJECT)) {
 				this.isNull = true;
 				return;
@@ -215,9 +245,11 @@ export class SyncedObject {
 				}
 				if (action === 'add') {
 					// If a new key is added to the object and is valid, integrate it
+					const validator = this.validator.$schema.shape[key];
+
 					const syncroState = createSyncroState({
 						key,
-						validator: this.validator.$schema.shape[key] as Validator,
+						validator: validator as Validator,
 						state: this.state,
 						parent: this
 					});
@@ -229,6 +261,9 @@ export class SyncedObject {
 	};
 
 	toJSON = () => {
+		if (this.isNull) {
+			return null;
+		}
 		return Object.entries(this.validator.$schema.shape).reduce((acc, [key, validator]) => {
 			const value = this.syncroStates[key]?.value;
 			if (value !== undefined) {

@@ -14,7 +14,7 @@ import type { DateValidator } from '../schemas/date.js';
 import type { BooleanValidator } from '../schemas/boolean.js';
 import { SyncedText } from './text.svelte.js';
 import { SyncedNumber } from './number.svelte.js';
-import { getTypeFromParent, logError } from '../utils.js';
+import { getInitialStringifiedValue, getTypeFromParent, logError } from '../utils.js';
 import { onMount, setContext } from 'svelte';
 import { CONTEXT_KEY, INITIALIZED, TRANSACTION_KEY } from '../constants.js';
 import { SyncedArray } from './array.svelte.js';
@@ -25,6 +25,9 @@ import type { SetValidator } from '../schemas/set.js';
 import { Presence, type PresenceUser } from '$lib/presence.svelte.js';
 import { SyncedMap } from './map.svelte.js';
 import type { MapValidator } from '$lib/schemas/map.js';
+import type { LiteralValidator } from '../schemas/literal.js';
+import type { DiscriminatedUnionValidator } from '../schemas/discriminatedUnion.js';
+import { SyncedDiscriminatedUnion } from './discriminatedUnion.svelte.js';
 
 export type SyncroStates =
 	| SyncedText
@@ -35,7 +38,8 @@ export type SyncroStates =
 	| SyncedObject
 	| SyncedArray
 	| SyncedSet
-	| SyncedMap;
+	| SyncedMap
+	| SyncedDiscriminatedUnion;
 
 // For testing purpose
 const safeSetContext = (key: string, value: any) => {
@@ -169,7 +173,8 @@ export const createSyncroState = ({
 	forceNewType,
 	value,
 	parent,
-	state
+	state,
+	forceValue
 }: {
 	key: string | number;
 	validator: Validator;
@@ -177,8 +182,18 @@ export const createSyncroState = ({
 	forceNewType?: boolean;
 	parent: SyncedContainer;
 	state: State;
+	forceValue?: boolean;
 }): SyncroStates => {
 	const type = getTypeFromParent({ forceNewType, parent: parent.yType, key, validator, value });
+
+	if (forceValue && type instanceof Y.Text) {
+		const stringifiedValue = getInitialStringifiedValue(value, validator);
+		if (typeof stringifiedValue === 'string' && stringifiedValue !== type.toString()) {
+			state.transaction(() => {
+				type.applyDelta([{ delete: type.length }, { insert: stringifiedValue }]);
+			});
+		}
+	}
 
 	switch (validator.$schema.kind) {
 		default:
@@ -262,6 +277,26 @@ export const createSyncroState = ({
 			return new SyncedMap({
 				yType: type as Y.Map<any>,
 				validator: validator as MapValidator<any>,
+				value,
+				parent,
+				key,
+				state
+			});
+		}
+		case 'literal': {
+			// Literals are stored as text since they're primitive values
+			return new SyncedText({
+				yType: type as Y.Text,
+				validator: validator as LiteralValidator<any> as any,
+				parent,
+				key,
+				state
+			});
+		}
+		case 'discriminatedUnion': {
+			return new SyncedDiscriminatedUnion({
+				yType: type as Y.Map<any>,
+				validator: validator as DiscriminatedUnionValidator<any, any>,
 				value,
 				parent,
 				key,

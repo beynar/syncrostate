@@ -23,7 +23,16 @@ const schema = {
 		.map(y.string())
 		.optional()
 		.nullable()
-		.default(new Map([['key', 'value']]))
+		.default(new Map([['key', 'value']])),
+	arrayOfObjects: y
+		.array(y.object({ text: y.string() }))
+		.optional()
+		.nullable()
+		.default([{ text: 'default' }]),
+	discriminatedUnion: y.discriminatedUnion('type', [
+		y.object({ type: y.literal('a'), value: y.string() }).default({ type: 'a', value: 'hello' }),
+		y.object({ type: y.literal('b'), value: y.number() }).default({ type: 'b', value: 1 })
+	])
 };
 
 const doc = new Doc();
@@ -237,4 +246,33 @@ describe('SyncroState', () => {
 			expect(state2.map.size).toBe(0);
 		});
 	});
+
+	describe('discriminatedUnion field', () => {
+		it('should sync regular discriminatedUnion mutation', () => {
+			expect(state1.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+			expect(state2.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+		});
+
+		it('should sync null discriminatedUnion mutation', () => {
+			(state1.discriminatedUnion as any) = null;
+			expect(state1.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+			expect(state2.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+		});
+
+		it('should sync undefined discriminatedUnion mutation', () => {
+			(state1.discriminatedUnion as any) = undefined;
+			expect(state1.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+			expect(state2.discriminatedUnion).toEqual({ type: 'a', value: 'hello' });
+		});
+
+		it('should sync discriminatedUnion mutation with different type', async () => {
+			state1.discriminatedUnion = { type: 'b', value: 42 };
+
+			await wait(100);
+			expect(state1.discriminatedUnion).toEqual({ type: 'b', value: 42 });
+			expect(state2.discriminatedUnion).toEqual({ type: 'b', value: 42 });
+		});
+	});
 });
+
+const wait = async (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));

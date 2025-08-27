@@ -3,7 +3,9 @@ node_modules
 # Output
 .output
 .vercel
-**/.svelte-kit
+package/.svelte-kit
+package/coverage
+demo/.svelte-kit
 /build
 /dist
 
