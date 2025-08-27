@@ -1,6 +1,6 @@
 {
 	"name": "syncrostate",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"description": "A reactive and real-time state management solution integrating Yjs with Svelte 5's runes for seamless collaborative applications",
 	"publishConfig": {
 		"access": "public"

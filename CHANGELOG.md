@@ -1,5 +1,41 @@
 # Changelog
 
+## [0.0.8] - 2025-08-27
+
+### Fixed
+
+#### Array Splice Method Critical Bug Fixes
+
+- **Fixed "Length exceeded!" error** in array splice operations that occurred when Y.js delete was called multiple times inside loops
+- **Fixed empty array handling** - Setting arrays to `[]` no longer returns `null`, properly maintains empty array state
+- **Fixed Y.js document synchronization** - Array operations now properly sync between Svelte5 $state and Y.js document
+- **Added comprehensive bounds validation** for array splice method to prevent crashes and ensure native JavaScript Array compatibility
+
+#### Array Splice Bounds Validation
+
+- **Negative start indices** - Now properly handles negative indices like native `Array.splice()` (e.g., `-1` refers to last element)
+- **Start index beyond array length** - Safely clamps to array bounds instead of causing errors
+- **Excessive deleteCount** - Prevents attempting to delete more items than available
+- **Negative deleteCount** - Treats negative values as 0 (no deletion) matching native behavior
+- **Edge case handling** - Robust handling of empty arrays, single elements, and boundary violations
+
+#### Array Schema Coercion Fix
+
+- **Fixed empty array coercion** - Empty arrays `[]` are now properly coerced and maintained instead of being converted to `null`
+
+### Technical Improvements
+
+- **Enhanced test coverage** with comprehensive diagnostic and bounds validation test suites
+- **Improved error handling** - Array operations no longer throw "Length exceeded!" errors under any circumstances  
+- **Better Y.js integration** - Proper synchronization between proxy arrays and underlying Y.js documents
+- **Memory optimization** - Fixed state cleanup order in splice operations to prevent memory spikes
+
+### Breaking Changes
+
+None - All fixes maintain backward compatibility while resolving critical synchronization bugs.
+
+---
+
 ## [0.0.7] - 2025-08-27
 
 ### Added
