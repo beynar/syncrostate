@@ -158,7 +158,7 @@ export class SyncedObject {
 					}
 
 					if (prop === 'toJSON') {
-						return this.toJSON();
+						return this.toJSON.bind(this);
 					}
 
 					const syncroState = this.syncroStates[prop];

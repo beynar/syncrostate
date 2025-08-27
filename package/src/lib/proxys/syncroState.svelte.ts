@@ -188,8 +188,10 @@ export const createSyncroState = ({
 
 	if (forceValue && type instanceof Y.Text) {
 		const stringifiedValue = getInitialStringifiedValue(value, validator);
-		if (stringifiedValue !== type.toString()) {
-			type.applyDelta([{ delete: type.length }, { insert: stringifiedValue }]);
+		if (typeof stringifiedValue === 'string' && stringifiedValue !== type.toString()) {
+			state.transaction(() => {
+				type.applyDelta([{ delete: type.length }, { insert: stringifiedValue }]);
+			});
 		}
 	}
 

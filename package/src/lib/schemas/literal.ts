@@ -33,10 +33,10 @@ export class LiteralValidator<
 	};
 
 	parse(value: any): { isValid: boolean; value: T | null } {
-		const coerced = this.coerce(value);
+		const isValid = this.isValid(value);
 		return {
-			isValid: this.isValid(value),
-			value: coerced
+			isValid,
+			value: isValid ? this.coerce(value) : null
 		};
 	}
 
@@ -49,6 +49,9 @@ export class LiteralValidator<
 			}
 		}
 		if (value === undefined) {
+			if (this.$schema.optional) {
+				return null;
+			}
 			return this.$schema.nullable ? null : this.defaultValue;
 		}
 		if (value === this.$schema.value) {

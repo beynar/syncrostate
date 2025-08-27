@@ -34,11 +34,11 @@ export class SyncedDiscriminatedUnion {
 		const { isValid, value } = this.validator.parse(input);
 
 		if (!isValid) {
-			logError('Invalid value', { value });
+			logError('Invalid value', { input });
 			return;
 		}
 		if (!value) {
-			if (!value) {
+			this.state.transaction(() => {
 				// Let discriminated union handle null and undefined
 				// It can be nullable or optional
 				// But the underlying object proxy can or can not reflect that aspect
@@ -47,7 +47,7 @@ export class SyncedDiscriminatedUnion {
 				} else {
 					this.objectProxy!.setNull();
 				}
-			}
+			});
 		} else {
 			const newDiscriminantValue =
 				this.validator.$schema.discriminantKey in value &&
@@ -167,18 +167,13 @@ export class SyncedDiscriminatedUnion {
 
 		Object.entries(shape).forEach(([key, validator]) => {
 			const syncedState = objectProxy.syncroStates[key];
-			const value = e.target.get(key)?.toString();
 
-			if (!value) {
-				return;
-			}
 			if (!syncedState) {
 				objectProxy.syncroStates[key] = createSyncroState({
 					key,
 					validator: validator as Validator,
 					parent: objectProxy,
-					state: this.state,
-					value
+					state: this.state
 				});
 			} else {
 				if (syncedState.validator !== shape[key]) {
@@ -187,8 +182,7 @@ export class SyncedDiscriminatedUnion {
 						key,
 						validator: validator as Validator,
 						parent: objectProxy,
-						state: this.state,
-						value
+						state: this.state
 					});
 				}
 			}
