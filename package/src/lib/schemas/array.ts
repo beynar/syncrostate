@@ -58,6 +58,9 @@ export class ArrayValidator<
 
 	coerce(value: any): ArrayType<T>[] | null {
 		const isArray = Array.isArray(value);
+		if (isArray && !value.length) {
+			return [];
+		}
 		const validItems = isArray ? value.filter((item) => this.$schema.shape.isValid(item)) : [];
 		const someValid = validItems.length > 0;
 
