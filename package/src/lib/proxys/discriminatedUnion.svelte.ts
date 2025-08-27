@@ -87,7 +87,7 @@ export class SyncedDiscriminatedUnion {
 	}
 
 	private swapValidator(discriminantValue?: string) {
-		if (!discriminantValue) {
+		if (discriminantValue === undefined) {
 			return;
 		}
 		const matchingValidator = this.getVariantByDiscriminant(discriminantValue);
