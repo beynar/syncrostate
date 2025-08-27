@@ -385,8 +385,8 @@ export class SyncedArray<T extends any = any> {
 		splice: (start: number, deleteCount: number, ..._items: T[]) => {
 			let result: any[] = [];
 			this.state.transaction(() => {
+				this.yType.delete(start, deleteCount);
 				const newSyncroStates = _items.map((item, index) => {
-					this.yType.delete(start, deleteCount);
 					return createSyncroState({
 						key: start + index,
 						forceNewType: true,
