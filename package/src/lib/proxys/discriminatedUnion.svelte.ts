@@ -42,9 +42,9 @@ export class SyncedDiscriminatedUnion {
 				// Let discriminated union handle null and undefined
 				// It can be nullable or optional
 				// But the underlying object proxy can or can not reflect that aspect
-				if (value === undefined) {
+				if (input === undefined) {
 					this.parent.deleteProperty({}, this.key);
-				} else {
+				} else if (input === null) {
 					this.objectProxy!.setNull();
 				}
 			});

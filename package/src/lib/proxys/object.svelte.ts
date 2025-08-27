@@ -40,7 +40,16 @@ export class SyncedObject {
 
 	setNull() {
 		this.isNull = true;
-		this.yType.set(NULL_OBJECT, new Y.Text(NULL_OBJECT));
+		this.state.transaction(() => {
+			// Clear existing keys to avoid stale state
+			Array.from(this.yType.keys()).forEach((k) => {
+				this.yType.delete(k);
+			});
+			// Drop local children to free memory
+			Object.values(this.syncroStates).forEach((s) => s.destroy());
+			this.syncroStates = {};
+			this.yType.set(NULL_OBJECT, new Y.Text(NULL_OBJECT));
+		});
 	}
 
 	set value(input: any) {
@@ -199,7 +208,6 @@ export class SyncedObject {
 					if (typeof prop !== 'string') {
 						return false;
 					}
-					console.log('has', { prop }, this.yType.has(prop), this.yType.get(prop));
 					return this.yType.has(prop);
 				},
 

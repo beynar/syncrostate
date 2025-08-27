@@ -270,7 +270,6 @@ describe('SyncroState', () => {
 
 			await wait(100);
 			expect(state1.discriminatedUnion).toEqual({ type: 'b', value: 42 });
-			console.log('here-1', { ...state2.discriminatedUnion });
 			expect(state2.discriminatedUnion).toEqual({ type: 'b', value: 42 });
 		});
 	});
