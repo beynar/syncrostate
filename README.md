@@ -97,7 +97,25 @@ Once created, you can use the state like a regular Svelte state: mutate it, bind
 			})),
 
 			// Sets of any primitive type
-			colors: y.set(y.string())
+			colors: y.set(y.string()),
+
+      // Discriminated union
+      user: y.discriminatedUnion("role", [
+        y.object({
+          // Literal value
+          role: y.literal("admin"),
+          permissions: y.array(y.string()),
+          canDeleteUsers: y.boolean(),
+        }),
+        y.object({
+          role: y.literal("user"),
+          permissions: y.array(y.string()),
+        }),
+        y.object({
+          role: y.literal("guest"),
+          expiresAt: y.date(),
+        }),
+      ]),
 		}
 	});
 </script>
@@ -172,7 +190,7 @@ const document = syncroState({
     const docName = "your-doc-name";
     const localProvider = new IndexeddbPersistence(docName, doc);
     const remoteClient = createClient({
-      publicApiKey: "your-api-key"
+      publicApiKey: "your-api-key",
     });
     const { room } = remoteClient.enterRoom(docName);
     localProvider.on("synced", () => {
@@ -181,7 +199,7 @@ const document = syncroState({
         synced();
       });
     });
-  }
+  },
   // ... your schema
 });
 ```
@@ -212,7 +230,7 @@ state.user.age = 30;
 state.user = {
   ...state.user,
   name: "John",
-  age: 30
+  age: 30,
 };
 ```
 
@@ -243,8 +261,7 @@ SyncroState uses Yjs's undo/redo system to provide undo/redo functionality. Thes
 
 ## Roadmap
 
-- [ ] Add support for Set and Map types
-- [ ] Find a way to make syncrostate schema optional
+- [ ] Find a way to make syncrostate schema optional,
 - [ ] Add support for recursive types
 - [ ] Add support for nested documents
 - [ ] Add a simple way to manage awareness sharing
