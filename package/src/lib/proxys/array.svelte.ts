@@ -385,10 +385,22 @@ export class SyncedArray<T extends any = any> {
 		splice: (start: number, deleteCount: number, ..._items: T[]) => {
 			let result: any[] = [];
 			this.state.transaction(() => {
-				this.yType.delete(start, deleteCount);
+				// Normalize start index (handle negative values like native Array.splice)
+				const actualStart = start < 0 ? Math.max(0, this.syncroStates.length + start) : Math.min(start, this.syncroStates.length);
+				
+				// Normalize deleteCount (don't delete more than available, treat negative as 0)
+				const actualDeleteCount = Math.min(Math.max(0, deleteCount), this.syncroStates.length - actualStart);
+				
+				// Delete from Y.js document (only if there are items to delete and within bounds)
+				if (actualDeleteCount > 0 && this.yType.length > actualStart) {
+					const yDeleteCount = Math.min(actualDeleteCount, this.yType.length - actualStart);
+					this.yType.delete(actualStart, yDeleteCount);
+				}
+				
+				// Create new SyncroState objects for inserted items
 				const newSyncroStates = _items.map((item, index) => {
 					return createSyncroState({
-						key: start + index,
+						key: actualStart + index,
 						forceNewType: true,
 						validator: this.validator.$schema.shape,
 						parent: this,
@@ -396,15 +408,19 @@ export class SyncedArray<T extends any = any> {
 						state: this.state
 					});
 				});
-				if (deleteCount) {
-					for (let i = 0; i < deleteCount; i++) {
-						const state = this.syncroStates[start + i];
+				
+				// Destroy old SyncroState objects for deleted items (with bounds checking)
+				if (actualDeleteCount > 0) {
+					for (let i = 0; i < actualDeleteCount; i++) {
+						const state = this.syncroStates[actualStart + i];
 						if (state) {
 							state.destroy();
 						}
 					}
 				}
-				result = this.syncroStates.splice(start, deleteCount, ...newSyncroStates);
+				
+				// Update the syncroStates array with normalized values
+				result = this.syncroStates.splice(actualStart, actualDeleteCount, ...newSyncroStates);
 			});
 
 			return result;
