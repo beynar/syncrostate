@@ -1,6 +1,6 @@
 {
 	"name": "syncrostate",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "A reactive and real-time state management solution integrating Yjs with Svelte 5's runes for seamless collaborative applications",
 	"publishConfig": {
 		"access": "public"
@@ -16,7 +16,7 @@
 		"format": "prettier --write .",
 		"lint": "prettier --check . && eslint .",
 		"test:unit": "vitest --ui --coverage",
-		"test": "npm run test:unit -- --run"
+		"test": "vitest --run"
 	},
 	"files": [
 		"dist",
