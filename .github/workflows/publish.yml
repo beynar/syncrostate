@@ -32,7 +32,7 @@ jobs:
         run: pnpm --filter syncrostate test
 
       - name: Build package
-        run: pnpm run package
+        run: pnpm --filter syncrostate run package
 
       - name: Check if version changed
         id: version-check
