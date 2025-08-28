@@ -27,7 +27,8 @@ export const getInitialStringifiedValue = (value: any, validator: Validator) => 
 		validator.$schema.kind === 'array' ||
 		validator.$schema.kind === 'object' ||
 		validator.$schema.kind === 'map' ||
-		validator.$schema.kind === 'set'
+		validator.$schema.kind === 'set' ||
+		validator.$schema.kind === 'discriminatedUnion'
 	) {
 		return undefined;
 	}
@@ -64,6 +65,7 @@ export const getTypeFromParent = <T extends Y.Array<any> | Y.Map<any> | Y.Text>(
 	const instance = getInstance(validator) as new () => Y.Array<any> | Y.Map<any> | Y.Text;
 	const isText = instance === Y.Text;
 	const stringifiedValue = getInitialStringifiedValue(value, validator);
+
 	const type = isText ? new Y.Text(stringifiedValue) : new instance();
 	const typeInParent = (isArray ? parent.get(Number(key)) : parent.get(String(key))) as T;
 
@@ -92,6 +94,7 @@ export const getInstance = (validator: Validator): (new () => Y.AbstractType<any
 	switch (validator.$schema.kind) {
 		case 'map':
 		case 'object':
+		case 'discriminatedUnion':
 			return Y.Map;
 		case 'set':
 		case 'array':

@@ -1,0 +1,14 @@
+reviews:
+  path_filters:
+    # Include these paths
+    - "package/src/**"
+    - "package/tests/**"
+
+    # Exclude these paths (prefix with !)
+    - "!node_modules/**"
+    - "!package/node_modules/**"
+    - "!package/dist/**"
+    - "!package/.svelte-kit/**"
+    - "!package/build/**"
+    - "!package/*.min.js"
+    - "!demo/**"

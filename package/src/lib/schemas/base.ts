@@ -9,7 +9,9 @@ export type BaseSchema<T> = {
 		| 'date'
 		| 'richText'
 		| 'set'
-		| 'map';
+		| 'map'
+		| 'literal'
+		| 'discriminatedUnion';
 	optional: boolean;
 	nullable: boolean;
 	default?: T;

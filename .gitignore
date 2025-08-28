@@ -5,6 +5,9 @@ node_modules
 .vercel
 .netlify
 .wrangler
+coverage
+.svelte-kit
+
 
 # OS
 .DS_Store
