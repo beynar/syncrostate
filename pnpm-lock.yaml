@@ -194,25 +194,6 @@ importers:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.3.0)(@vitest/ui@3.2.4)(jiti@1.21.7)(yaml@2.7.0)
 
-  worker:
-    dependencies:
-      y-partyserver:
-        specifier: ^0.0.31
-        version: 0.0.31(@cloudflare/workers-types@4.20241230.0)(partyserver@0.0.59(@cloudflare/workers-types@4.20241230.0))(yjs@13.6.21)
-      yjs:
-        specifier: ^13.6.21
-        version: 13.6.21
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: ^4.20241230.0
-        version: 4.20241230.0
-      typescript:
-        specifier: ^5.5.2
-        version: 5.7.2
-      wrangler:
-        specifier: ^3.60.3
-        version: 3.99.0(@cloudflare/workers-types@4.20241230.0)
-
 packages:
 
   '@alloc/quick-lru@5.2.0':
