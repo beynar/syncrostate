@@ -42,7 +42,7 @@
 		"konva": "^9.3.18",
 		"roughjs": "^4.6.6",
 		"svelte-konva": "^0.3.1",
-		"syncrostate": "workspace:*",
+		"@syncrostate/svelte": "workspace:*",
 		"y-partyserver": "^0.0.31"
 	}
 }
