@@ -2,6 +2,11 @@
   "name": "@syncrostate/core",
   "module": "index.ts",
   "type": "module",
+  "version": "2.0.0-beta.1",
+  "publishConfig": {
+    "access": "public"
+  },
+  "license": "MIT",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
